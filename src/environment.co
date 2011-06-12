@@ -1,0 +1,24 @@
+##
+## @author Christophe Eymard <christophe.eymard@ravelsoft.com>
+
+##
+#
+#
+function Environment (specs) ->
+    that = {}
+
+    that.loader = specs.loader or {}
+    that.filters = filter for filter in require "./filter"
+
+    fromString = function (string) ->
+        # FIXME return a parsed template from string.
+
+    fromLoader = function (string) ->
+        # FIXME return a parsed template obtained from the loader.
+
+    that <<< 
+        fromString: fromString, 
+        fromLoader: fromLoader,
+        loader: specs.loader or {}, 
+        filters: filter for filter in require "./filter"
+    return that

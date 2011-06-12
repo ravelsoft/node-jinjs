@@ -1,0 +1,55 @@
+`#!/usr/bin/env node`
+
+optimist = require "optimist"
+    .usage "Transform a JinJS formatted file or stdin to a javascript function\n or execute it directly with a given context.\nUsage: $0 [options] file\n       $0 [options]"
+    .boolean "help"
+    .alias "help", "h"
+    .describe "help" "Show this help"
+argv = optimist.argv
+
+fs = require "fs"
+sys = require "sys"
+jinjs = require "./jinjs_prev"
+
+# If help, show it then exit.
+if argv.help
+    console.log optimist.help()
+    process.exit 0
+
+parser = jinjs.Parser ()
+transform_files = true
+
+function compile (string) ->
+    parsed = parser.parse (string)
+    compiled_function = parsed.compile ()
+
+    "(function (ctx, env) {
+        var _blocs = {};
+        env = env || _default_env;
+        var _res = '';
+            #{compiled_function}
+        return _res; })"
+
+if argv._.length > 0
+    # Open all the files and transform them to JS functions.
+    # This is actually not so useful to have many since the created
+    # variables are immediately lost. This will be useful with a context though...
+    for file of argv._
+        (err, data) <- fs.readFile file, 'utf-8', ...
+        if err
+            console.warn err.message
+            return
+        sys.print compile data
+else
+    process.stdin.resume ()
+    process.stdin.setEncoding "utf-8"
+
+    # Read our file from stdin
+    data = ""
+    process.stdin.on "data", (chunk) ->
+        data += chunk
+
+    # When read, process it.
+    <- process.stdin.on "end"
+    sys.print (compile data)
+

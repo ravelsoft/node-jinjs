@@ -1,0 +1,65 @@
+
+exports.in = function (obj, arr) ->
+    x = null
+    for x in arr
+        if arr.hasOwnProperty (x) and obj is arr[x]
+            return true
+    return false
+
+exports.abs = function (num) ->
+    return -num if num < 0
+    num
+
+exports.capitalize = function (str) ->
+    return str.charAt(0).toUpperCase() + str.slice(1)
+
+exports.default = function (value, default_value) ->
+    return default_value if value is undefined
+    value
+
+exports.filesizeformat = function (value) ->
+    # FIXME : value is a number, make it smaller to get
+    # xxMb, xxGb, xxKb
+    return value
+
+exports.first = function (arr) ->
+    return arr[0]
+
+exports.last = function (arr) ->
+    return null if not arr?.length
+    arr[arr.length - 1]
+
+exports.groupby = function (arr, attribute) ->
+    # FIXME : Chain objects in array that have the same attribute.
+    return _arr
+
+exports.join = function (arr, string) ->
+    i = 0
+    _l = arr.length
+    _res = ""
+
+    for i from 0 to l - 1
+        if i > 0
+            _res += string
+        _res += arr[i].toString ()
+    return _res
+
+exports.length = function (arr) ->
+    if not arr?
+        return 0
+    arr.length
+
+exports.lower = function (value) ->
+    value.toLowerCase ()
+
+exports.upper = function (value) ->
+    value.toUpperCase ()
+
+exports.replace = function (string, regexp, newvalue) ->
+    string.replace regexp, newvalue
+
+exports.reverse = function (arr) ->
+    arr.reverse ()
+
+exports.round = function (value, precision) ->
+    value # FIXME
