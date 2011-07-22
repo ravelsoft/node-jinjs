@@ -16,7 +16,7 @@
     ],
     "engines"     : {"node": ">=0.4.0"},
     "directories" : {"lib" : "./lib"  },
-    "main" : "./lib/pwilang",
+    "main" : "./lib/jinjs",
     "bin" : {
         "jinjs" : "./lib/command.js"
      },
