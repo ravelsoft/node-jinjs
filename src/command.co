@@ -10,6 +10,7 @@ argv = optimist.argv
 fs = require "fs"
 sys = require "sys"
 jinjs = require "./jinjs_prev"
+env = require "./environment" ; .default_env
 
 # If help, show it then exit.
 if argv.help
