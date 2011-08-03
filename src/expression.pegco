@@ -11,7 +11,7 @@ make_filter = (expression, filters) ->
 }.
 
 expression
-    = ternary_operator
+    = space? t:ternary_operator .{ return t }.
 
 ternary_operator
     = p:operation QUESTION_MARK e1:ternary_operator COLON e2:ternary_operator .{ return "(#{p} ? #{e1} : #{e2})" }.
@@ -19,8 +19,8 @@ ternary_operator
 
 operation
     = u:unary p:expression .{ return "#{u}#{p}" }.
-    / p:filter_expression IN s:operation .{ return "__in(#{p}, #{s})" }.
     / p:filter_expression o:binary s:operation .{ return "#{p}#{o}#{s}" }.
+    / p:filter_expression IN s:operation .{ return "__in(#{p}, #{s})" }.
     / p:filter_expression o:post_unary .{ return "#{p}#{o}" }.
     / filter_expression
 
@@ -78,7 +78,7 @@ array_literal
     = LBRACKET args:call_arguments? RBRACKET .{ return "[#{args}]" }.
 
 identifier
-    = space? first:[$a-zA-Z_] rest:[$a-zA-Z_0-9]* space? .{ return "#{first}#{rest.join ""}" }.
+    = first:[$a-zA-Z_] rest:[$a-zA-Z_0-9]* .{ return "#{first}#{rest.join ""}" }.
 
 /* Used for any variable of function name */
 primary_identifier
@@ -162,7 +162,7 @@ PIPE
 DOT
     = space? "." space? .{ return "." }.
 IN
-    = space? "in" space? .{ return " in " }.
+    = space "in" space .{ return " in " }.
 ASSIGN
     = space? "=" space? .{ return " = " }.
 
@@ -188,13 +188,16 @@ POST_UNARY_OPERATOR
     / "--"
 
 binary
-    = space? op:BINARY_OPERATOR space? .{ return " " + op + " " }.
+    = space op:TEXT_BINARY_OPERATOR space .{ return " #{op} " }.
+    / space? op:BINARY_OPERATOR space? .{ return " " + op + " " }.
 
-BINARY_OPERATOR
+TEXT_BINARY_OPERATOR
     = "instanceof"
     / "and" .{ return "&&" }.
     / "or" .{ return "||" }.
-    / ">>>"
+
+BINARY_OPERATOR
+    = ">>>"
     / "==="
     / "!=="
     / "=="

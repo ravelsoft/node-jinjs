@@ -27,10 +27,10 @@ p = (str) ->
 failed_count = 0
 total_count = 0
 test = (str, result, message) ->
-    #try
-    r = p str
-    #catch e
-    #    r = e.message
+    try
+        r = p str
+    catch e
+        r = e.message
     total_count := total_count + 1
     if r != result
         failed_count := failed_count + 1
@@ -79,4 +79,7 @@ test 'toto().a', 'toto().a'
 test 'script.toto', '__ctx__.script.toto'
 test 'step=script.steps[node.step_name]', '__ctx__.step = __ctx__.script.steps[__ctx__.node.step_name]'
 test '"string"', '"string"'
+test 'toto in tata', "__in(toto, tata)"
 test 'toto in tata ? toto : null', "(__in(toto, tata) ? toto : null)"
+test 'toto instanceof tata', "toto instanceof tata"
+test 'toto + tata', "toto + tata"

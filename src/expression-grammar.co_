@@ -3,7 +3,11 @@ function make_expression (input, compilation_ctx, startRule) ->
     grammar = __grammar__
     grammar.compilation_ctx = compilation_ctx
     # console.log input
-    return grammar.parse input, startRule
+    try
+        return grammar.parse input, startRule
+    catch e
+        console.log "Error in expression: #{input}"
+        throw e
 
 make_parse_rule = (rule_name) ->
     return (contents, ctx) -> make_expression contents, ctx, rule_name
