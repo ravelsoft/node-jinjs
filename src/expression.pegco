@@ -1,56 +1,57 @@
-.{
-make_filter = (expression, filters) ->
-    res = expression
-    for f of filters
-        args = ""
-        args = ", #{f.args}" if f.args
 
-        res = "#{f.name}(#{res}#{args})"
-    return res
+->
+    make_filter = (expression, filters) ->
+        res = expression
+        for f of filters
+            args = ""
+            args = ", #{f.args}" if f.args
 
-}.
+            res = "#{f.name}(#{res}#{args})"
+        return res
 
 expression
-    = space? t:ternary_operator .{ return t }.
+    = space? t:ternary_operator -> 
+        return t
 
 ternary_operator
-    = p:operation QUESTION_MARK e1:ternary_operator COLON e2:ternary_operator .{ return "(#{p} ? #{e1} : #{e2})" }.
+    = p:operation QUESTION_MARK e1:ternary_operator COLON e2:ternary_operator -> return "(#{p} ? #{e1} : #{e2})"
     / operation
 
 operation
-    = u:unary p:expression .{ return "#{u}#{p}" }.
-    / p:filter_expression o:binary s:operation .{ return "#{p}#{o}#{s}" }.
-    / p:filter_expression IN s:operation .{ return "__in(#{p}, #{s})" }.
-    / p:filter_expression o:post_unary .{ return "#{p}#{o}" }.
+    = u:unary p:expression -> return "#{u}#{p}" 
+    / p:filter_expression o:binary s:operation -> return "#{p}#{o}#{s}" 
+    / p:filter_expression IN s:operation -> return "__in(#{p}, #{s})" 
+    / p:filter_expression o:post_unary -> return "#{p}#{o}" 
     / filter_expression
 
 filter_expression
-    = expr:function_expression f:filter_rec .{ return make_filter expr, f }.
+    # A single line comment.
+    = expr:function_expression f:filter_rec -> return make_filter expr, f 
     / function_expression
 
 filter_rec
-    = lit:filter_literal r:filter_rec .{ return [].concat lit, r }.
+    = lit:filter_literal r:filter_rec -> return [].concat lit, r 
     / filter_literal
 
 function_expression
-    = expr:dot_expression LPAREN args:call_arguments? RPAREN DOT i:dotted_identifier .{ return "#{expr}(#{args}).#{i}" }.
-    / expr:dot_expression LPAREN args:call_arguments? RPAREN .{ return "#{expr}(#{args})" }.
+    = expr:dot_expression LPAREN args:call_arguments? RPAREN DOT i:dotted_identifier -> return "#{expr}(#{args}).#{i}" 
+    / expr:dot_expression LPAREN args:call_arguments? RPAREN -> return "#{expr}(#{args})" 
     / dot_expression
 
 call_arguments
-    = e:expression COMMA c:call_arguments .{ return "#{e}, #{c}" }.
+    = e:expression COMMA c:call_arguments -> return "#{e}, #{c}" 
     / expression
 
 dot_expression
-    = p:array_index_expression DOT i:dotted_identifier .{ return p + "." + i }.
+    = p:array_index_expression DOT i:dotted_identifier -> return p + "." + i 
     / p:array_index_expression
 
 dotted_identifier
-    = i:identifier arr:array_literal? DOT i2:dotted_identifier .{ return i + arr + "." + i2 }.
-    / i:identifier arr:array_literal? .{ return i + arr }.
+    = i:identifier arr:array_literal? DOT i2:dotted_identifier -> return i + arr + "." + i2 
+    / i:identifier arr:array_literal? -> return i + arr 
 
 array_index_expression
-    = p:primary_expression LBRACKET exp:expression RBRACKET .{ return "#{p}[#{exp}]" }.
+    = p:primary_expression LBRACKET exp:expression RBRACKET -> return "#{p}[#{exp}]" 
     / primary_expression
 
 
@@ -62,69 +63,69 @@ primary_expression
     / number
     / string
     / regexp
-    / LPAREN e:expression RPAREN .{ return "(#{e})" }.
+    / LPAREN e:expression RPAREN -> return "(#{e})"
 
 object_literal
-    = LBRACE args:object_arguments? RBRACE .{ return "{ #{args} }" }.
+    = LBRACE args:object_arguments? RBRACE -> return "{ #{args} }"
 
 object_arguments
-    = a:object_argument COMMA args:object_arguments .{ return "#{a}, #{args}" }.
+    = a:object_argument COMMA args:object_arguments -> return "#{a}, #{args}" 
     / object_argument
 
 object_argument
-    = i:identifier COLON e:expression .{ return "#{i}: #{e}" }.
-    / s:string COLON e:expression .{ return "#{s}: #{e}" }.
+    = i:identifier COLON e:expression -> return "#{i}: #{e}" 
+    / s:string COLON e:expression -> return "#{s}: #{e}" 
 
 array_literal
-    = LBRACKET args:call_arguments? RBRACKET .{ return "[#{args}]" }.
+    = LBRACKET args:call_arguments? RBRACKET -> return "[#{args}]" 
 
 identifier
-    = first:[$a-zA-Z_] rest:[$a-zA-Z_0-9]* .{ return "#{first}#{rest.join ""}" }.
+    = first:[$a-zA-Z_] rest:[$a-zA-Z_0-9]* -> return "#{first}#{rest.join ""}" 
 
 /* Used for any variable of function name */
 primary_identifier
-    = ident:identifier .{ return if ident in compilation_ctx then "#{ident}" else "__ctx__.#{ident}" }.
+    = ident:identifier -> return if ident in compilation_ctx then "#{ident}" else "__ctx__.#{ident}" 
 
 filter_literal
-    = PIPE name:filter_name LPAREN args:call_arguments? RPAREN .{ return [name: name, args: args] }.
-    / PIPE name:filter_name .{ return [name: name] }.
+    = PIPE name:filter_name LPAREN args:call_arguments? RPAREN -> return [name: name, args: args] 
+    / PIPE name:filter_name -> return [name: name] 
 
 /* Used for filters 
 */
 filter_name
-    = ident:identifier .{ return "__filter__[\"#{ident}\"]" }.
+    = ident:identifier -> return "__filter__[\"#{ident}\"]" 
 
 number
-    = f:[0-9]+ d:"." s:[0-9]+ .{ return "#{f.join ""}#{d}#{s.join ""}" }.
-    / n:[0-9]+ .{ return "#{n.join ""}" }.
+    = f:[0-9]+ d:"." s:[0-9]+ -> return "#{f.join ""}#{d}#{s.join ""}" 
+    / n:[0-9]+ -> return "#{n.join ""}" 
 
 string
-    = space? "'" sglcnt:single_quoted_contents? "'" space? .{ return "'#{sglcnt}'" }.
-    / space? '"' dblcnt:double_quoted_contents? '"' space? .{ return "\"#{dblcnt}\"" }.
+    = space? "'" sglcnt:single_quoted_contents? "'" space? -> return "'#{sglcnt}'" 
+    / space? '"' dblcnt:double_quoted_contents? '"' space? -> return "\"#{dblcnt}\"" 
 
 regexp
     /* \u002F is forward slash but it messes up syntax highlighting. 
     */
-    = space? "\u002F" regcnt:regexp_contents? "\u002F" modifs:([a-z]+)? space? .{ return "/#{regcnt}/#{if modifs then modifs.join "" else ""}"}.
+    = space? "\u002F" regcnt:regexp_contents? "\u002F" modifs:([a-z]+)? space? -> return "/#{regcnt}/#{if modifs then modifs.join "" else ""}"
 
 single_quoted_contents
-    = s1:single_quoted_terminal s2:single_quoted_contents .{ return s1 + s2 }.
+    = s1:single_quoted_terminal s2:single_quoted_contents -> return s1 + s2 
     / single_quoted_terminal
 
 single_quoted_terminal
     = "\\'"
-    / [^']
+    / [^\']
 
 double_quoted_contents
-    = s1:double_quoted_terminal s2:double_quoted_contents .{ return s1 + s2 }.
+    = s1:double_quoted_terminal s2:double_quoted_contents -> return s1 + s2 
     / double_quoted_terminal
 
 double_quoted_terminal
     = '\\"'
-    / [^"]
+    / [^\"]
 
 regexp_contents
-    = s1:regexp_terminal s2:regexp_contents .{ return s1 + s2 }.
+    = s1:regexp_terminal s2:regexp_contents -> return s1 + s2 
     / regexp_terminal
 
 regexp_terminal
@@ -132,47 +133,45 @@ regexp_terminal
     / [^/]
 
 
-//////////////////////////////////////////////////////////////
-
 space
-    = [\t\n ]+ .{ return " " }.
+    = [\t\n ]+ -> return " " 
 COMMA
-    = space? "," space? .{ return "," }.
+    = space? "," space? -> return "," 
 COLON
-    = space? ":" space? .{ return ":" }.
+    = space? ":" space? -> return ":" 
 QUESTION_MARK
-    = space? "?" space? .{ return "?" }.
+    = space? "?" space? -> return "?" 
 LPAREN
-    = space? "(" space? .{ return "(" }.
+    = space? "(" space? -> return "(" 
 RPAREN
-    = space? ")" space? .{ return ")" }.
+    = space? ")" space? -> return ")" 
 LBRACE
-    = space? '{' space? .{ return "\u007B" }.
+    = space? '{' space? -> return "\u007B" 
 
 RBRACE
-    = space? '}' space? .{ return "\u007D" }.
+    = space? '}' space? -> return "\u007D" 
 
 LBRACKET
-    = space? "[" space? .{ return "[" }.
+    = space? "[" space? -> return "[" 
 
 RBRACKET
-    = space? "]" space? .{ return "]" }.
+    = space? "]" space? -> return "]" 
 
 PIPE
-    = space? "|" .{ return "|" }.
+    = space? "|" -> return "|" 
 DOT
-    = space? "." space? .{ return "." }.
+    = space? "." space? -> return "." 
 IN
-    = space "in" space .{ return " in " }.
+    = space "in" space -> return " in " 
 ASSIGN
-    = space? "=" space? .{ return " = " }.
+    = space? "=" space? -> return " = " 
 
 unary
-    = space? op:UNARY_OPERATOR space? .{ return "#{op} " }.
+    = space? op:UNARY_OPERATOR space? -> return "#{op} " 
 
 UNARY_OPERATOR
     = "!"
-    / "not" .{ return "!" }.
+    / "not" -> return "!" 
     / "~"
     / "++"
     / "--"
@@ -182,20 +181,24 @@ UNARY_OPERATOR
     / "delete"
 
 post_unary
-    = space? op:POST_UNARY_OPERATOR space? .{ return " " + op }.
+    = space? op:POST_UNARY_OPERATOR space? -> return " " + op 
 
 POST_UNARY_OPERATOR
     = "++"
     / "--"
 
 binary
-    = space op:TEXT_BINARY_OPERATOR space .{ return " #{op} " }.
-    / space? op:BINARY_OPERATOR space? .{ return " " + op + " " }.
+    # FIXME will probably need to make it so that the textual binary
+    # operators can have not only space but also parentheses.
+    = space op:TEXT_BINARY_OPERATOR space ->
+        return " #{op} " 
+
+    / space? op:BINARY_OPERATOR space? -> return " #{op} "
 
 TEXT_BINARY_OPERATOR
     = "instanceof"
-    / "and" .{ return "&&" }.
-    / "or" .{ return "||" }.
+    / "and" -> return "&&" 
+    / "or" -> return "||" 
 
 BINARY_OPERATOR
     = ">>>"
@@ -228,10 +231,10 @@ BINARY_OPERATOR
     / "*"
 
 NEW
-    = space? "new" space? .{ return "new" }.
+    = space? "new" space? -> return "new" 
 
 special_value
-    = space? s:SPECIAL space? .{ return s }.
+    = space? s:SPECIAL space? -> return s 
 
 SPECIAL
     = "false"
@@ -241,21 +244,45 @@ SPECIAL
     / "null"
     / "undefined"
 
+#######################################################################
+##
+##  The following rules are used by the Node::compile method to parse their
+##      contents more elegantly than by using regexps.
+
 tag_for
-    = key:identifier IN exp:expression .{ return key: key, condition: exp }.
-    / key:identifier COMMA value:identifier IN exp:expression .{ return key: key, value: value, condition: exp }.
+    = key:identifier IN exp:expression -> 
+        return key: key, condition: exp 
+
+    / key:identifier COMMA value:identifier IN exp:expression -> 
+        return key: key, value: value, condition: exp 
 
 tag_let
-    = variable_name:identifier ASSIGN expression:expression .{ return variable_name: variable_name, expression: expression }.
+    = variable_name:identifier ASSIGN expression:expression -> 
+        return variable_name: variable_name, expression: expression 
 
 tag_macro
-    = function_name:identifier LPAREN args:macro_call_arguments? RPAREN .{ return function_name:function_name, args: if args == '' then [] else args }.
+    = function_name:identifier LPAREN args:macro_call_arguments? RPAREN -> 
+        return function_name:function_name, args: if args == '' then [] else args 
 
 macro_call_arguments
-    = name:identifier ASSIGN exp:expression COMMA args:macro_call_arguments .{ name.default_value = exp ; args.push name ; return args }.
-    / name:identifier COMMA args:macro_call_arguments .{ args.push name ; return args }.
-    / name:identifier ASSIGN exp:expression .{ name.default_value = exp ; return [name] }.
-    / name:identifier .{ return [name] }.
+    = name:identifier ASSIGN exp:expression COMMA args:macro_call_arguments -> 
+        name.default_value = exp 
+        args.push name 
+        return args 
+
+    / name:identifier COMMA args:macro_call_arguments -> 
+        args.push name
+        return args 
+
+    / name:identifier ASSIGN exp:expression -> 
+        name.default_value = exp 
+        return [name] 
+
+    / name:identifier -> 
+        return [name] 
 
 tag_block
-    = space? first_letter:[a-zA-Z_] next_letters:[-a-zA-Z0-9_]* space? .{ return "#{first_letter}#{if next_letters then next_letters.join "" else ''}" }.
+    = space? first_letter:[a-zA-Z_] next_letters:[-a-zA-Z0-9_]* space? -> 
+        return "#{first_letter}#{if next_letters then next_letters.join "" else ''}" 
+
+## END
