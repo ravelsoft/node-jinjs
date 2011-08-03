@@ -11,7 +11,17 @@ make_filter = (expression, filters) ->
 }.
 
 expression
-    = operation
+    = ternary_operator
+
+ternary_operator
+    = p:operation QUESTION_MARK e1:ternary_operator COLON e2:ternary_operator .{ return "(#{p} ? #{e1} : #{e2})" }.
+    / operation
+
+operation
+    = u:unary p:expression .{ return "#{u}#{p}" }.
+    / p:filter_expression IN s:operation .{ return "__in(#{p}, #{s})" }.
+    / p:filter_expression o:binary s:operation .{ return "#{p}#{o}#{s}" }.
+    / p:filter_expression o:post_unary .{ return "#{p}#{o}" }.
     / filter_expression
 
 filter_expression
@@ -54,11 +64,6 @@ primary_expression
     / regexp
     / LPAREN e:expression RPAREN .{ return "(#{e})" }.
 
-operation
-    = u:unary p:expression .{ return "#{u}#{p}" }.
-    / p:filter_expression o:binary s:expression .{ return "#{p}#{o}#{s}" }.
-    / p:filter_expression o:post_unary .{ return "#{p}#{o}" }.
-
 object_literal
     = LBRACE args:object_arguments? RBRACE .{ return "{ #{args} }" }.
 
@@ -67,7 +72,7 @@ object_arguments
     / object_argument
 
 object_argument
-    = identifier SEMICOLON expression
+    = identifier COLON expression
 
 array_literal
     = LBRACKET args:call_arguments? RBRACKET .{ return "[#{args}]" }.
@@ -132,8 +137,10 @@ space
     = [\t\n ]+ .{ return " " }.
 COMMA
     = space? "," space? .{ return "," }.
-SEMICOLON
+COLON
     = space? ":" space? .{ return ":" }.
+QUESTION_MARK
+    = space? "?" space? .{ return "?" }.
 LPAREN
     = space? "(" space? .{ return "(" }.
 RPAREN
@@ -182,7 +189,6 @@ POST_UNARY_OPERATOR
 
 binary
     = space? op:BINARY_OPERATOR space? .{ return " " + op + " " }.
-    / IN
 
 BINARY_OPERATOR
     = "instanceof"
@@ -227,6 +233,9 @@ SPECIAL
     = "false"
     / "true"
     / "this"
+    / "void"
+    / "null"
+    / "undefined"
 
 tag_for
     = key:identifier IN exp:expression .{ return key: key, condition: exp }.

@@ -1,6 +1,14 @@
 var __filter__ = {{ filter_exp|default("require('jinjs/lib/filters')") }};
 var __get_template__ = {{ require_exp|default("require") }};
-
+var __indexOf = [].indexOf || function(x){
+  for (var i = this.length; i-- && this[i] !== x;); return i;
+};
+function __in (obj, container) {
+    if (obj instanceof Array) {
+        return __indexOf.call(container, obj) > -1;
+    }
+    return container[obj] !== undefined;
+}
 {% if clone %}// A useful function stolen from coco to duplicate objects
 var __import = function(obj, src){
     var own = {}.hasOwnProperty;

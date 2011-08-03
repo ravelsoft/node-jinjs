@@ -79,3 +79,4 @@ test 'toto().a', 'toto().a'
 test 'script.toto', '__ctx__.script.toto'
 test 'step=script.steps[node.step_name]', '__ctx__.step = __ctx__.script.steps[__ctx__.node.step_name]'
 test '"string"', '"string"'
+test 'toto in tata ? toto : null', "(__in(toto, tata) ? toto : null)"
