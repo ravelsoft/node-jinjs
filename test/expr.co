@@ -1,0 +1,81 @@
+#!/usr/bin/env coco
+{ make_expression } = require \../lib/expression
+
+# Some terminal color definition.
+reset = "\x1B[0m"
+grey =    "\x1B[0;30m"
+red =     "\x1B[0;31m"
+green =   "\x1B[0;32m"
+yellow =  "\x1B[0;33m"
+blue =    "\x1B[0;34m"
+magenta = "\x1B[0;35m"
+cyan =    "\x1B[0;36m"
+white =   "\x1B[0;37m"
+bgrey =    "\x1B[1;30m"
+bred =     "\x1B[1;31m"
+bgreen =   "\x1B[1;32m"
+byellow =  "\x1B[1;33m"
+bblue =    "\x1B[1;34m"
+bmagenta = "\x1B[1;35m"
+bcyan =    "\x1B[1;36m"
+bwhite =   "\x1B[1;37m"
+
+p = (str) ->
+    ctx = toto: true, tata: true
+    return make_expression str, ctx
+
+failed_count = 0
+total_count = 0
+test = (str, result, message) ->
+    #try
+    r = p str
+    #catch e
+    #    r = e.message
+    total_count := total_count + 1
+    if r != result
+        failed_count := failed_count + 1
+        log "  #{bred}!!#{reset} #{str} #{bred}=>#{reset} #{red}#{r}#{reset} (#{yellow}#{result}#{reset})"
+    else
+        log "  #{bgreen}*#{reset} #{str} #{bgreen}=>#{reset} #{green}#{r}#{reset}"
+        
+
+log = console.log
+
+test "2 + 2", "2 + 2"
+test "toto", "toto"
+test "prout", "__ctx__.prout"
+test "toto + 2", "toto + 2"
+test "prout + 2", "__ctx__.prout + 2"
+test "toto.prout", "toto.prout"
+test "prout.toto", "__ctx__.prout.toto"
+test "prout.toto (2)", "__ctx__.prout.toto(2)"
+test "toto.prout (2, 3, 4)", "toto.prout(2, 3, 4)"
+test "toto(3) + tata.toto", "toto(3) + tata.toto"
+test "tata.toto(3, toto.tata) + tata.toto", "tata.toto(3, toto.tata) + tata.toto"
+test "variable|filtre", "__filter__[\"filtre\"](__ctx__.variable)"
+test "toto.tata(4)|filtre", "__filter__[\"filtre\"](toto.tata(4))"
+test "variable|filtre(2)", "__filter__[\"filtre\"](__ctx__.variable, 2)"
+test "variable|filtre(2, toto)", "__filter__[\"filtre\"](__ctx__.variable, 2, toto)"
+test "v|f|g", "__filter__[\"g\"](__filter__[\"f\"](__ctx__.v))"
+test "variable|filtre(2 + tata, prout * toto)|another", "__filter__[\"another\"](__filter__[\"filtre\"](__ctx__.variable, 2 + tata, __ctx__.prout * toto))"
+test "variable|filtre(2 + tata|boup, prout * toto)", "__filter__[\"filtre\"](__ctx__.variable, 2 + __filter__[\"boup\"](tata), __ctx__.prout * toto)"
+test "a(b(1))", "__ctx__.a(__ctx__.b(1))"
+test "a(b(1|fi))", "__ctx__.a(__ctx__.b(__filter__[\"fi\"](1)))"
+test "2 + tata|boup", "2 + __filter__[\"boup\"](tata)"
+test "'toto'", "'toto'"
+test "'to\\\'to'", "'to\\\'to'"
+test '"toto"', '"toto"'
+test '"to\\\"to"', '"to\\\"to"'
+test '/regexp/', '/regexp/'
+test '/reg\\/exp/', '/reg\\/exp/'
+test '/regexp/gi', '/regexp/gi'
+test 'toto|filtre(3) == 2', '__filter__["filtre"](toto, 3) == 2'
+test 'toto[tata]', 'toto[tata]'
+test '[1, 2, 3]', '[1, 2, 3]'
+test 'toto[tata] + toto[tati]', 'toto[tata] + toto[__ctx__.tati]'
+test 'toto[tata].bubu[tutu]', 'toto[tata].bubu[__ctx__.tutu]'
+test 'f()|filtre', '__filter__["filtre"](__ctx__.f())'
+test 'toto().a', 'toto().a'
+test 'script.toto', '__ctx__.script.toto'
+test 'step=script.steps[node.step_name]', '__ctx__.step = __ctx__.script.steps[__ctx__.node.step_name]'
+test '"string"', '"string"'

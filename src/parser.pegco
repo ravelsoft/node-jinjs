@@ -5,23 +5,23 @@
  */
 
 {
-    var tag_opening = "{%";
-    var tag_closing = "%}";
+    tag_opening = "{%"
+    tag_closing = "%}"
 
-    var comment_opening = "{#";
-    var comment_closing = "#}";
+    comment_opening = "{#"
+    comment_closing = "#}"
 
-    var print_opening = "{{";
-    var print_closing = "}}";
+    print_opening = "{{"
+    print_closing = "}}"
 
-    var comment_single_line = "#";
-    var tag_single_line = "%";
+    comment_single_line = "#"
+    tag_single_line = "%"
 
-    var nodes = require("./nodes").nodes;
-    // var filters = require("./filters");
+    nodes = require("./nodes").nodes
+    # filters = require("./filters");
 
-    var inside_tag = false;
-    var inside_single_line = false;
+    inside_tag = false
+    inside_single_line = false
 }
 
 toplevel
@@ -46,7 +46,6 @@ space
     = sp:[ \t]+ { return sp.join(""); }
 
 endline
-    // We eat up all the empty endlines to not perturbate indentation count.
     = end1:"\n" sp:space? end:endline { return end1 + sp + end; }
     / "\n" { return "\n"; }
 

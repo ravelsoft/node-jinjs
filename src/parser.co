@@ -1,0 +1,297 @@
+sys = require \sys
+{ Lexer } = require \./lexer
+{ NodeComment, NodeList, NodePrint, default_nodes } = require \./nodes
+
+tk_tag_open = "{%"
+tk_tag_open_spc = "{%-"
+tk_tag_close = "%}"
+tk_tag_close_spc = "-%}"
+tk_tag_single = "%"
+tk_comment_open = "{#"
+tk_comment_open_spc = "{#-"
+tk_comment_close = "#}"
+tk_comment_close_spc = "-#}"
+tk_comment_single = "#"
+tk_print_open = "{{"
+tk_print_close = "}}"
+tk_new_line = "\n"
+
+default_tokens = [ tk_tag_open,
+              tk_tag_open_spc,
+              tk_tag_close,
+              tk_tag_close_spc,
+              #tk_tag_single,
+              tk_comment_open,
+              tk_comment_open_spc,
+              tk_comment_close,
+              tk_comment_close_spc,
+              #tk_comment_single,
+              tk_print_open,
+              tk_print_close,
+              tk_new_line ]
+
+/**
+ *  @param str A string
+ *  @returns    A trimmed string, without leading nor ending spaces.
+ */
+function trim (str) ->
+    if str === null
+        return null
+    return str.replace(/^\s+/g,'').replace(/\s+$/g,'')
+
+_tag_search = / *([a-zA-Z][-a-zA-Z0-9_]*) *(.*)/
+/**
+ *  @param stmt The contents between {% and %}
+ *  @returns    An object containing the tag portion and the contents.
+ */
+function parse_tag (stmt) ->
+    m = _tag_search.exec stmt
+    return [m[1], m[2]]
+
+function remove_spaces (str) ->
+    i = 0
+    while str[i] of [' ', "\t"]
+        i += 1
+    return [str.substr(0, i), str.substr(i)]
+
+/**
+ *  The parser is used to build a node tree : this node tree will present a compile () method
+ *  that generates javascript code ready to be compiled.
+ */
+class Parser
+    (specs) ->
+        specs ?= {}
+
+        @nodes = specs.nodes ? default_nodes
+        @lexer = new Lexer tokens: default_tokens
+        @root = NodeList()
+        @trim_blocks = specs.trim_blocks ? true
+        @_discard_next_space = false
+        @_discard_next_newline = false
+
+        # This one is sent when we had still the accumulator
+        # and the current token.
+        @_cached_next = null
+    
+    _nextToken: ->
+        if @_cached_next?
+            @current_token = @_cached_next
+            @_cached_next = null
+            return
+
+        acc = ''
+        do
+            @current_token = @lexer.next()
+
+            if @current_token === tk_new_line
+                acc += @current_token
+                @current_token = ''
+
+            else if @current_token?
+                [spaces, tok] = remove_spaces @current_token
+                acc += spaces
+                @current_token = tok
+
+        while @current_token === '' and @current_token !== null
+
+        if acc === '' and @current_token === null
+            return
+
+        if @_discard_next_space or @current_token of [tk_tag_open_spc, tk_comment_open_spc]
+            # discard all the spaces encountered until now : do not add
+            # the accumulator, and leave @current_token as it is.
+            @_discard_next_space = false
+            return
+
+        if @current_token of [tk_comment_close_spc, tk_tag_close_spc]
+            # Tell the parser to ignore the next spaces it will encounter.
+            @_discard_next_space = true
+        
+        if acc
+            @_cached_next = @current_token
+            @current_token = acc
+
+    nextToken: ->
+        @_nextToken()
+
+        if not @current_token?
+            return
+
+        _ref = @current_token
+        if @_discard_next_newline
+            for i from 0 to _ref.length - 1
+                if _ref[i] == '\n'
+                    @current_token = _ref.substr i + 1
+                    break
+            # We can't send ''
+            if not @current_token
+                @nextToken()
+                return
+            @_discard_next_newline = false
+
+
+        if @trim_blocks and @current_token of [tk_comment_close, tk_tag_close]
+            @_discard_next_newline = true
+
+    /**
+     *  Parse comments in the input.
+     *  @return nothing ! We ditch everything inside.
+     */
+    parseComment: function ->
+        balance = 1
+
+        comment = ""
+
+        do
+            # The input is completely ignored until the end of the comment.
+            @nextToken()
+
+            if @current_token == tk_comment_close or @current_token == tk_comment_close_spc
+                balance -= 1
+                continue
+
+            if @current_token == tk_comment_open or @current_token == tk_comment_open_spc
+                balance += 1
+                continue
+
+            comment += @current_token
+        while @current_token? and balance > 0
+
+        if balance != 0
+            throw new Exception "Unclosed Comment at line #{_lexer.lineno}"
+
+        # return new NodeComment contents: comment
+        return
+
+
+    /**
+     *  Parse a print statement. Usually delimited by {{ and }}
+     *  The insides of the print statement are in turn parsed to escape
+     *  variables and filters with the ctx. and env.filters. prefix respectively.
+     *
+     *  @return a PrintNode
+     */
+    parsePrintStatement: function ->
+        statement = ""
+
+        do
+            @current_token = @lexer.next()
+
+            if @current_token and @current_token != tk_print_close 
+                statement += @current_token
+
+        while @current_token? and @current_token != tk_print_close
+
+        if @current_token is null
+            throw new Exception "Waiting for '#{tk_print_close}' at line #{@lexer.lineno}"
+
+        return new NodePrint contents: trim statement
+
+    /**
+     *
+     */
+    parseTag: function (waiting_for) ->
+        tag_contents = ""
+
+        @nextToken()
+
+        while @current_token? and @current_token != tk_tag_close and @current_token != tk_tag_close_spc
+            tag_contents += @current_token
+            @nextToken()
+
+        if @current_token is null
+            throw "Waiting for '#{tk_tag_close}' on line #{@lexer.lineno}"
+
+        [name, contents] = parse_tag tag_contents
+
+        if name in waiting_for
+            @last_tag = [name, contents]
+            return
+        
+        if not @nodes[name]
+            throw "Unexpected tag : '#{name}' at line #{@lexer.lineno}"
+
+        stop_clause = {}
+
+        until_clause = @nodes[name].\until
+        stop_clause[until_clause] = true
+
+        inside_clause = @nodes[name].\inside
+        stop_clause <<< inside_clause
+
+
+        if until_clause == "__endfile__"
+            child_node = @parseLevel()
+
+        else if until_clause
+            child_node = @parseLevel stop_clause
+
+        tag = new @nodes[name] name: trim(name), contents: trim(contents), child_node: child_node
+
+        if not until_clause
+            return tag
+
+        while @last_tag? and @last_tag.0 != until_clause
+            [inside_name, inside_contents] = [@last_tag.0, @last_tag.1]
+
+            inside_cls = @nodes[name].inside[inside_name]
+            inside_clause = inside_cls.\inside
+            stop_clause = {"#{until_clause}": true} <<< inside_clause ? {}
+
+            inside_tag = @parseLevel stop_clause
+            tag.push new inside_cls name: inside_name, contents: inside_contents, child_node: inside_tag
+
+        return tag
+
+
+    /**
+     *  Parse the input file.
+     *  @return the root NodeList
+     */
+    parseLevel: function (waiting_for) ->
+        waiting_for ?= {}
+
+        if waiting_for? and not typeof waiting_for == \object
+            waiting_for = {waiting_for: true}
+
+        result = new NodeList()
+
+        while true
+            @nextToken()
+            if not @current_token
+                break
+
+            if @current_token == tk_tag_open or @current_token == tk_tag_open_spc
+                tag = @parseTag waiting_for
+                if not tag
+                    return result
+                result.push tag
+                continue
+
+            if @current_token == tk_print_open
+                result.push @parsePrintStatement()
+                continue
+
+            if @current_token == tk_comment_open or @current_token == tk_comment_open_spc
+                result.push @parseComment()
+                continue
+
+            # We push the current string as a normal text node.
+            result.push @current_token
+
+        return result
+
+    /**
+     *  Holder function for _parse_global
+     *  @return _parse_global's result
+     */
+    parse: function (str) ->
+        @lexer.feed str
+        @current = @root
+        @current_token = ""
+
+        return @parseLevel()
+
+exports.Parser = Parser
+exports.default_tokens = default_tokens
+

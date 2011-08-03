@@ -1,0 +1,248 @@
+.{
+make_filter = (expression, filters) ->
+    res = expression
+    for f of filters
+        args = ""
+        args = ", #{f.args}" if f.args
+
+        res = "#{f.name}(#{res}#{args})"
+    return res
+
+}.
+
+expression
+    = operation
+    / filter_expression
+
+filter_expression
+    = expr:function_expression f:filter_rec .{ return make_filter expr, f }.
+    / function_expression
+
+filter_rec
+    = lit:filter_literal r:filter_rec .{ return [].concat lit, r }.
+    / filter_literal
+
+function_expression
+    = expr:dot_expression LPAREN args:call_arguments? RPAREN DOT i:dotted_identifier .{ return "#{expr}(#{args}).#{i}" }.
+    / expr:dot_expression LPAREN args:call_arguments? RPAREN .{ return "#{expr}(#{args})" }.
+    / dot_expression
+
+call_arguments
+    = e:expression COMMA c:call_arguments .{ return "#{e}, #{c}" }.
+    / expression
+
+dot_expression
+    = p:array_index_expression DOT i:dotted_identifier .{ return p + "." + i }.
+    / p:array_index_expression
+
+dotted_identifier
+    = i:identifier arr:array_literal? DOT i2:dotted_identifier .{ return i + arr + "." + i2 }.
+    / i:identifier arr:array_literal? .{ return i + arr }.
+
+array_index_expression
+    = p:primary_expression LBRACKET exp:expression RBRACKET .{ return "#{p}[#{exp}]" }.
+    / primary_expression
+
+
+primary_expression
+    = special_value
+    / primary_identifier
+    / object_literal
+    / array_literal
+    / number
+    / string
+    / regexp
+    / LPAREN e:expression RPAREN .{ return "(#{e})" }.
+
+operation
+    = u:unary p:expression .{ return "#{u}#{p}" }.
+    / p:filter_expression o:binary s:expression .{ return "#{p}#{o}#{s}" }.
+    / p:filter_expression o:post_unary .{ return "#{p}#{o}" }.
+
+object_literal
+    = LBRACE args:object_arguments? RBRACE .{ return "{ #{args} }" }.
+
+object_arguments
+    = object_argument COMMA object_arguments
+    / object_argument
+
+object_argument
+    = identifier SEMICOLON expression
+
+array_literal
+    = LBRACKET args:call_arguments? RBRACKET .{ return "[#{args}]" }.
+
+identifier
+    = space? first:[$a-zA-Z_] rest:[$a-zA-Z_0-9]* space? .{ return "#{first}#{rest.join ""}" }.
+
+/* Used for any variable of function name */
+primary_identifier
+    = ident:identifier .{ return if ident in compilation_ctx then "#{ident}" else "__ctx__.#{ident}" }.
+
+filter_literal
+    = PIPE name:filter_name LPAREN args:call_arguments? RPAREN .{ return [name: name, args: args] }.
+    / PIPE name:filter_name .{ return [name: name] }.
+
+/* Used for filters 
+*/
+filter_name
+    = ident:identifier .{ return "__filter__[\"#{ident}\"]" }.
+
+number
+    = f:[0-9]+ d:"." s:[0-9]+ .{ return "#{f.join ""}#{d}#{s.join ""}" }.
+    / n:[0-9]+ .{ return "#{n.join ""}" }.
+
+string
+    = space? "'" sglcnt:single_quoted_contents? "'" space? .{ return "'#{sglcnt}'" }.
+    / space? '"' dblcnt:double_quoted_contents? '"' space? .{ return "\"#{dblcnt}\"" }.
+
+regexp
+    /* \u002F is forward slash but it messes up syntax highlighting. 
+    */
+    = space? "\u002F" regcnt:regexp_contents? "\u002F" modifs:([a-z]+)? space? .{ return "/#{regcnt}/#{if modifs then modifs.join "" else ""}"}.
+
+single_quoted_contents
+    = s1:single_quoted_terminal s2:single_quoted_contents .{ return s1 + s2 }.
+    / single_quoted_terminal
+
+single_quoted_terminal
+    = "\\'"
+    / [^']
+
+double_quoted_contents
+    = s1:double_quoted_terminal s2:double_quoted_contents .{ return s1 + s2 }.
+    / double_quoted_terminal
+
+double_quoted_terminal
+    = '\\"'
+    / [^"]
+
+regexp_contents
+    = s1:regexp_terminal s2:regexp_contents .{ return s1 + s2 }.
+    / regexp_terminal
+
+regexp_terminal
+    = "\\/"
+    / [^/]
+
+
+//////////////////////////////////////////////////////////////
+
+space
+    = [\t\n ]+ .{ return " " }.
+COMMA
+    = space? "," space? .{ return "," }.
+SEMICOLON
+    = space? ":" space? .{ return ":" }.
+LPAREN
+    = space? "(" space? .{ return "(" }.
+RPAREN
+    = space? ")" space? .{ return ")" }.
+LBRACE
+    = space? '{' space? .{ return "\u007B" }.
+
+RBRACE
+    = space? '}' space? .{ return "\u007D" }.
+
+LBRACKET
+    = space? "[" space? .{ return "[" }.
+
+RBRACKET
+    = space? "]" space? .{ return "]" }.
+
+PIPE
+    = space? "|" .{ return "|" }.
+DOT
+    = space? "." space? .{ return "." }.
+IN
+    = space? "in" space? .{ return " in " }.
+ASSIGN
+    = space? "=" space? .{ return " = " }.
+
+unary
+    = space? op:UNARY_OPERATOR space? .{ return "#{op} " }.
+
+UNARY_OPERATOR
+    = "!"
+    / "not" .{ return "!" }.
+    / "~"
+    / "++"
+    / "--"
+    / "typeof"
+    / "void"
+    / "new"
+    / "delete"
+
+post_unary
+    = space? op:POST_UNARY_OPERATOR space? .{ return " " + op }.
+
+POST_UNARY_OPERATOR
+    = "++"
+    / "--"
+
+binary
+    = space? op:BINARY_OPERATOR space? .{ return " " + op + " " }.
+    / IN
+
+BINARY_OPERATOR
+    = "instanceof"
+    / "and" .{ return "&&" }.
+    / "or" .{ return "||" }.
+    / ">>>"
+    / "==="
+    / "!=="
+    / "=="
+    / "!="
+    / ">="
+    / "<="
+    / "&&"
+    / "||"
+    / "<<"
+    / ">>"
+    / "+="
+    / "-="
+    / "%="
+    / "\u002F="
+    / "*="
+    / "="
+    / "|"
+    / "\u002F"
+    / "^"
+    / "&"
+    / "|"
+    / "+"
+    / ">"
+    / "<"
+    / "%"
+    / "-"
+    / "*"
+
+NEW
+    = space? "new" space? .{ return "new" }.
+
+special_value
+    = space? s:SPECIAL space? .{ return s }.
+
+SPECIAL
+    = "false"
+    / "true"
+    / "this"
+
+tag_for
+    = key:identifier IN exp:expression .{ return key: key, condition: exp }.
+    / key:identifier COMMA value:identifier IN exp:expression .{ return key: key, value: value, condition: exp }.
+
+tag_let
+    = variable_name:identifier ASSIGN expression:expression .{ return variable_name: variable_name, expression: expression }.
+
+tag_macro
+    = function_name:identifier LPAREN args:macro_call_arguments? RPAREN .{ return function_name:function_name, args: if args == '' then [] else args }.
+
+macro_call_arguments
+    = name:identifier ASSIGN exp:expression COMMA args:macro_call_arguments .{ name.default_value = exp ; args.push name ; return args }.
+    / name:identifier COMMA args:macro_call_arguments .{ args.push name ; return args }.
+    / name:identifier ASSIGN exp:expression .{ name.default_value = exp ; return [name] }.
+    / name:identifier .{ return [name] }.
+
+tag_block
+    = space? first_letter:[a-zA-Z_] next_letters:[-a-zA-Z0-9_]* space? .{ return "#{first_letter}#{if next_letters then next_letters.join "" else ''}" }.

@@ -1,268 +1,358 @@
 
-#  @param str  a string
-#  @returns    an escaped string suitable to be quoted.
-#
+{ parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression } = require \./expression
+
+/**
+ *  @param str  a string
+ *  @returns    an escaped string suitable to be quoted.
+ */
 function escape (str) ->
     str.replace /\\/g, '\\\\' # Backslash escaping
         .replace /["']/g, (str) -> # Quote escaping
             "\\#{str}"
-        .replace '\n', '\\n' # New line escaping
+        .replace /\n/g, '\\n' # New line escaping
 
-function trim (str) ->
-    str.replace /^\s*/, ""
-        .replace /\s*$/, ""
+class Exception
+    (msg) ->
+        @message = msg
+class JinJSUnimplementedException extends Exception
+    -> super ...
+class JinJSUnexpectedError extends Exception
+    -> super ...
 
-#   The basic Node.
-#  
-function BasicNode (specs, that) ->
-    specs ?= {}
-    that ?= {}
-    that.specs = specs
+/**
+ *
+ */
+class Node
+    (specs) ->
+        @contents = specs.contents if specs?.contents
+    compile: ->
+        throw new JinJSUnimplementedException
+    ind: (opts) ->
+        opts.__indent__ ?= 0
+        opts.__indent__ = opts.__indent__ + 1
+        ind = opts.__indent__ * 4
+        return "\n" + (" " * ind)
+    ded: (opts) ->
+        opts.__indent__ ?= 1
+        opts.__indent__ = opts.__indent__ - 1
+        ind = opts.__indent__ * 4
+        return "\n" + " " * ind
+    cur: (opts) ->
+        ind = (opts.__indent__ ? 0) * 4
+        return "\n" + " " * ind
+/**
+ *
+ */
+class NodeBasic extends Node
+    (specs) -> super ...
+    compile: function (opts, ctx) ->
+        "#{@cur opts}_res += '#{escape @contents}';"
 
-    that.compile = function (opts, ctx) ->
-        "_res += '#{specs.contents}';"
+    append: function (contents) ->
+        @contents += contents
 
-    return that
+class NodeComment extends Node
+    (specs) ->
+        @contents = specs.contents ? ""
 
-#   A list of nodes that are to be evaluated one after another.
-#  
-function NodeList (specs, that) ->
-    BasicNode specs, that
+    compile: function (opts, ctx) ->
+        "#{@cur opts}/*#{@contents}*/"
 
-    _last_is_string = false
-    nodes = []
+/**
+ *  A collection of Nodes.
+ */
+class NodeList extends Node
+    (specs) ->
+        @nodes = []
+        super ...
 
-    that.compile = function (opts, ctx) ->
-        ctx = ctx || []
-        i = 0
+    push: function (node) ->
+        if not node?
+            return
+
+        if typeof node == \string # node is a String
+            last_node = @nodes[@nodes.length - 1]
+            if last_node instanceof NodeBasic
+                last_node.append node
+            else
+                @nodes.push new NodeBasic contents: node
+        else
+            @nodes.push node
+        
+    compile: function (opts, ctx) ->
+        ctx ?= {}
         res = ""
-        for node of nodes
+        for node of @nodes
             res += node.compile opts, ctx
         return res
 
-    that.push = function (node) ->
-        if node.charAt # node is a String
-            if _last_is_string
-                nodes[nodes.length - 1].specs.contents += escape node
-            else
-                nodes.push BasicNode( contents: escape node )
-            _last_is_string := true
-        else
-            _last_is_string := false
-            nodes.push node
+/**
+ *
+ */
+class NodePrint extends Node
+    (specs) -> super ...
+    compile: function (opts, ctx) ->
+        return "#{@cur opts}_res += (#{make_expression @contents, ctx} || '').toString();"
 
-    that.nodes = nodes
-    return that
+class NodeTag extends Node
+    @tag = \__tag__
+    (specs) -> super ...
+    compile: ->
+        throw new JinJSUnimplementedException "The NodeTag is not meant to be used !"
+
+    toString: ->
+        return "Node: #{this.constructor.displayName}"
+
+/**
+ *
+ */
+class NodeExtends extends NodeTag
+    @tag = \extends
+
+    (specs) -> super ...
+
+    compile: function (opts, ctx) ->
+        opts.'extends' = true
+        tpl_name = parse_extends @contents, opts
+        return "#{@cur opts}__extends__ = __get_template__ (#{tpl_name});"
+
+/**
+ *
+ */
+class NodeInclude extends NodeTag
+    @tag = \include
+
+    (specs) -> super ...
+
+    compile: function (opts, ctx) ->
+        return "#{@cur opts}_res += __get_template__ (#{make_expression @contents, ctx}).render(__ctx__);"
+
+/**
+ *
+ */
+class NodeLet extends NodeTag
+    @tag = \let
+
+    (specs) -> super ...
+
+    compile: function (opts, ctx) ->
+        { variable_name, expression } = parse_let @contents, ctx
+
+        ctx[variable_name] = true # The variable name is now accessible to the rest of the template.
+        return res = "#{@cur opts}var #{variable_name} = (__ctx__.#{variable_name} = #{expression});"
+
+class NodeDo extends NodeTag
+    @tag = \do
+    (specs) -> super ...
+
+    compile: function (opts, ctx) ->
+        return "#{@cur opts}#{make_expression @contents, ctx};"
+
+/**
+ */
+class NodeTagContainer extends NodeList
+    (specs) ->
+        super ...
+        @child_node = specs.child_node
+
+    child_code: (opts, ctx) ->
+        return (@child_node?.compile opts, ctx) ? ""
+
+/**
+ *
+ */
+class NodeMacro extends NodeTagContainer
+    @tag = \macro
+    @until = \endmacro
+
+    (specs) -> super ...
+
+    init_defaults: (opts, args) ->
+        res = ""
+        for a in args
+            if a.default_value
+                res += "#{@cur opts}#{a} = (#{a} === undefined) ? (#{a.default_value}) : #{a};"
+
+    compile: (opts, ctx) ->
+        { args, function_name } = parse_macro @contents, ctx
+
+        ctx[function_name] = true # This macro is now accessible to all the template code that follows.
+        new_ctx = {} <<< ctx
+
+        for argname of args
+            new_ctx[argname] = true
+
+        return "#{@cur opts}function #{function_name}(#{args.join ", "}) {
+                    #{@ind opts}var _res = '';
+                    #{@init_defaults opts, args}
+                    #{@child_code opts, new_ctx}
+                    #{@cur opts}return _res;
+                #{@ded opts}}
+                #{@cur opts}__ctx__.#{function_name} = #{function_name};
+                "
+
+/**
+ *
+ */
+class NodeBlock extends NodeTagContainer
+    @tag = \block
+    @until = \endblock
+
+    (specs) -> super ...
+
+    compile: (opts, ctx) ->
+        block_name = parse_block @contents, ctx
+        opts.blocks ?= {}
+
+        new_ctx = {\super : true} <<< ctx
+
+        # Output the block expression into the block
+        indent = opts.__indent__
+        opts.__indent__ = 4
+        opts.blocks[block_name] = "#{@cur opts}var _res = '';
+                #{@child_code opts, new_ctx}
+                #{@cur opts}return _res;"
+        opts.__indent__ = indent
+
+        return "#{@cur opts}// Adding the current block as the super of the currently defined block with the same name.
+            #{@cur opts}if (_b['#{block_name}'] !== undefined) {
+            #{@ind opts}(function (original) {
+                #{@ind opts}_b['#{block_name}'] = function (__ctx__) { return original.call ({ super: __block_#{block_name}}, __ctx__); };
+            #{@ded opts}})(_b['#{block_name}']);
+        #{@ded opts}} else { _b['#{block_name}'] = __block_#{block_name}; }
+        #{@cur opts}if (__extends__ === null) _res += _b['#{block_name}'](__ctx__);"
 
 
-#  The print statement's node. Ensures everything is outputted correctly,
-#  and changes undefined or null values to ''.
-#
-function NodePrint (specs, that) ->
-    BasicNode specs, that
 
-    that.compile = function (opts, ctx) ->
-        "_res += (#{make_expr specs.contents, ctx}) || '';"
+class NodeElse extends NodeTagContainer
+    @tag = \else
 
-    return that
+    @parse = function (pd) ->
+        return new NodeElse child_node: pd.child_node
 
-re_let_varname = /\s*([a-zA-Z_]\w+)\s*=/
+    (specs) ->
+        super ...
 
-#   Add a variable to the current context.
-#  
-function NodeLet (specs, that) ->
-    BasicNode specs, that
-
-    # console.log specs.contents
-    match = re_let_varname.exec specs.contents
-    if match is null 
-        throw "Let was expecting a correct variable name"
-
-    var_name = match[1]
-
-    that.compile = function (opts, ctx) ->
-        ctx.push var_name
-        return "#{specs.contents};"
-
-    return that
-
-##
-#
-function NodeTag (specs, that) ->
-    BasicNode specs, that
-
-    # Until is used to control until where a node will want to eat up input.
-    # If a tag has an input, it will go into that.inside.
-    # until = "none" is just a standalone tag (ie. {% let %})
-    # until = "endfile" puts the rest of the file into inside ({% extends %})
-    # until = "endtag" is until {% end... %} (id. {% if ... %}{% endif %}
-    that.until = "none"
-    return that
-
-re_macro_fn_name = /\s*([a-zA-Z_]\w+)\s*\((.*)\)/
-re_macro_arg_names = /[a-zA-Z_]\w+/g
-
-function NodeMacro (specs, that) ->
-    NodeTag specs, that
-    that.until = "endtag"
-
-    match = re_macro_fn_name.exec specs.contents
-    if match is null
-        throw "Macro declaration is invalid"
-
-    fn_name = match[1]
-    var_names = []
-
-    # This is not a replacement ; since "replace" allows us to iterate over
-    # all the matches, we use it to get all the variable names.
-    match[2].replace re_macro_arg_names, (s) ->
-        var_names.push (s)
-        return s
-
-    that.compile = function (opts, ctx) ->
-        _res = ""
-        
-        # Function is now available in current context.
-        ctx.push fn_name
-        # We copy the current context and add the variables names inside the new one
-        new_ctx = ctx.slice 0
-        for variable_name of var_names
-            new_ctx.push variable_name
-        
-        _res += "function #{specs.contents} { var _res = '';"
-        if that.inside then _res += that.inside.compile opts, new_ctx
-        _res += "return _res; }"
-
-        return _res
-
-    return that
-
-#  
-#   This node just outputs } else {
-#  
-function NodeElse (specs, that) ->
-    NodeTag specs, that
-
-    that.compile = function (opts, ctx) ->
-        "} else { "
-
-    return that
-
-
-#  
-#   The conditional node
-#  
-function NodeIf (specs, that) ->
-    NodeTag specs, that
-    that.until = "endtag";
-
-    condition = specs.contents
-
-    that.compile = function (opts, ctx) ->
-        res = "if (#{make_expr condition, ctx} {"
-        if that.inside then res += that.inside.compile opts, ctx
-        res += "} "
+    compile: (opts, ctx) ->
+        res = "#{@ded opts}} else {" 
+        @ind opts
+        res += "#{@child_code opts, ctx}"
         return res
 
-    return that
+class NodeElseIf extends NodeTagContainer
+    @tag = \elseif
+    @inside = elseif: NodeElseIf, else: NodeElse
+
+    (specs) ->
+        super ...
+
+    compile: function (opts, ctx) ->
+        res = "#{@ded opts}} else if (#{make_expression @contents, ctx}) {"
+        @ind opts
+        res += "#{@child_code opts, ctx}"
+        return res
+
+class NodeIf extends NodeTagContainer
+    @tag = \if
+    @until = \endif
+    @inside = else: NodeElse, elseif: NodeElseIf
+
+    (specs) ->
+        super ...
+
+    compile: function (opts, ctx) ->
+        res = "#{@cur opts}if (#{make_expression @contents, ctx}) {"
+        @ind opts
+        res += "#{@child_code opts, ctx}#{super.call this, opts, ctx}
+        #{@ded opts}}"
+        return res
 
 
-#   A very simple node : does what it's told.
-#  
-function NodeDo (specs, that) ->
-    NodeTag specs, that
+class NodeElseFor extends NodeTagContainer
+    @tag = \else
+    @until = \endfor
 
-    that.compile = function (opts, ctx) ->
-        "#{make_expr specs.contents};"
+    @parse = function (pd) ->
+        return new NodeElseFor child_node: pd.child_node
+    
+    (specs) ->
+        super ...
 
-    that.until = "none"
-    return that
+    compile: function (opts, ctx) ->
+        # loop.index is not defined if we didn't enter the loop.
+        res = "#{@ded opts}if (loop.index === undefined) {"
+        @ind opts
+        res += "#{@child_code opts, ctx}#{@ded opts}}"
+        return res
 
-
-#   Similar to python's elif
-#  
-function NodeElseIf (specs, that) ->
-    NodeIf specs, that
-
-    condition = specs.contents
-
-    that.compile = function (opts, ctx) ->
-        " } else if (#{make_expr condition, ctx}) {"
-
-    that.until = "none"
-    return that
-
-
-re_for = /([a-zA-Z_]\w*)\s*(,\s*([a-zA-Z_]\w*))?\s*in\s*(.*)/
 
 #   A Node that emulates the for () { } statement.
 #  
-function NodeFor (specs, that) ->
-    NodeTag specs, that
-    that.until = "endtag"
+class NodeFor extends NodeTagContainer
+    @tag = \for
+    @until = \endfor
+    @inside = else: NodeElseFor
 
-    m = re_for.exec specs.contents
-    if m is null
-        throw "For expression in invalid"
-    iterator = m[1]
-    value_iterator = m[3]
-    container_expression = m[4]
+    (specs) ->
+        super ...
 
-    that.compile = function (opts, ctx) ->
-        opts ?= {}
-        ctx = ctx.slice 0
-        ctx.push iterator
-        if value_iterator then ctx.push value_iterator
-        # Adding a custom variable to the context.
-        ctx.push 'loop'
+    compile: function (opts, ctx) ->
+        { key, value, condition } = parse_for @contents, ctx
 
-        container = make_expr trim container_expression, ctx
-        res = ""
+        if not value # Iterating over an array.
+            return "#{@cur opts}(function () {
+                #{@ind opts}i = 0;
+                #{@cur opts}var _ref = (#{condition}) || [];
+                #{@cur opts}var _prev_loop = __ctx__.loop;
+                #{@cur opts}var _prev_key = __ctx__.#{key};
+                #{@cur opts}var loop = (__ctx__.loop = {length: _ref.length, callee: arguments.callee});
+                #{@cur opts}for (i = 0; i < loop.length; i++) {
+                    #{@ind opts}loop.index = i + 1; loop.index0 = i;
+                    #{@cur opts}loop.first = (i == 0); loop.last = (i == loop.length - 1);
+                    #{@cur opts}__ctx__.#{key} = _ref[i];
+                    #{@child_code opts, ctx}
+                #{@ded opts}}
+                #{super.call this, opts, ctx}
+                #{@cur opts}__ctx__.loop = _prev_loop;
+                #{@cur opts}__ctx__.#{key} = _prev_key;
+            #{@ded opts}})();"
+        else # Iterating over an object.
+            res = "#{@cur opts}(function () {
+                #{@ind opts}x = '';
+                #{@cur opts}i = 0;
+                #{@cur opts}var _ref = (#{condition}) || {};
+                #{@cur opts}var _prev_loop = __ctx__.loop;
+                #{@cur opts}var _prev_key = __ctx__.#{key};
+                #{@cur opts}var _prev_value = __ctx__.#{value};
+                #{@cur opts}var loop = (__ctx__.loop = { callee: arguments.callee });
+                #{@cur opts}for (x in _ref) {
+                    #{@ind opts}if (_ref.hasOwnProperty(x)) {
+                        #{@ind opts}loop.index0 = i;
+                        #{@cur opts}loop.index = i + 1;
+                        #{@cur opts}__ctx__.#{key} = x;
+                        #{@cur opts}__ctx__.#{value} = _ref[x];
+                        #{@child_code opts, ctx}
+                        #{@cur opts}i += 1;
+                    #{@ded opts}}
+                #{@ded opts}}
+                #{super.call this, opts, ctx}
+                #{@cur opts}__ctx__.loop = _prev_loop;
+                #{@cur opts}__ctx__.#{key} = _prev_key;
+                #{@cur opts}__ctx__.#{value} = _prev_value;
+            #{@ded opts}})();"
+            return res
 
-        if value_iterator is undefined # For loop with only one variable, so in array
-            res += "(function () {                                  
-            i = 0;
-            var #{iterator} = null;
-            var __expr = #{container} || [];
-            var loop = {};
-            loop.length = __expr.length;
-            loop.callee = arguments.callee;
-            for (i = 0; i < __expr.length; i++) {
-                loop.index = i + 1; loop.index0 = i;
-                loop.first = i == 0; loop.last = i == __expr.length - 1;
-                #{iterator} = __expr[i];"
-
-            if that.inside then res += that.inside.compile opts, ctx
-
-            res += "} }) ();"
-        else
-            res += "(function () {
-            x = 0;
-            i = 0;
-            var #{iterator} = null;
-            var #{iterator_value} = null;
-            var __expr = #{container} || {};
-            var loop = {};
-            loop.callee = arguments.callee;
-            for (x in __expr) {
-                loop.index = i + 1; loop.index0 = i;
-                i += 1;
-                #{iterator} = x;
-                #{iterator_value} = __expr[x];"
-            if that.inside then res += that.inside.compile opts, ctx
-            res += "} }) ();"
-
-        return res
-
-    return that
-
-
-exports.nodes =
-    'if': NodeIf,
-    'else' : NodeElse,
-    'elseif' : NodeElseIf,
-    'do' : NodeDo,
-    'let' : NodeLet,
-    'for' : NodeFor,
-    'macro' : NodeMacro
+exports <<< { 
+    NodeIf, NodeDo, NodeLet, NodeFor, NodeMacro, NodeList, NodeBasic, 
+    NodePrint, NodeComment, NodeExtends, NodeInclude,
+    default_nodes: do
+        \if : NodeIf
+        \do : NodeDo
+        \let : NodeLet
+        \for : NodeFor
+        \macro : NodeMacro
+        \extends : NodeExtends
+        \block : NodeBlock
+        \include : NodeInclude
+    }
 

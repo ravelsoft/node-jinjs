@@ -1,39 +1,51 @@
+_filters = exports
 
-exports.in = function (obj, arr) ->
+_filters.\in = (obj, arr) ->
     x = null
     for x in arr
         if arr.hasOwnProperty (x) and obj is arr[x]
             return true
     return false
 
-exports.abs = function (num) ->
+_filters.\abs = (num) ->
     return -num if num < 0
     num
 
-exports.capitalize = function (str) ->
+_filters.\capitalize = (str) ->
     return str.charAt(0).toUpperCase() + str.slice(1)
 
-exports.default = function (value, default_value) ->
+_filters.\default = (value, default_value) ->
     return default_value if value is undefined
     value
 
-exports.filesizeformat = function (value) ->
-    # FIXME : value is a number, make it smaller to get
-    # xxMb, xxGb, xxKb
-    return value
+_filters.\filesizeformat = (value) ->
+    if value < 1024
+        return "#{value}"
+    if value < 1024 * 1024
+        val = val / 1024
+        unit = "Kb"
+    else if value < 1024 * 1024 * 1024
+        val = val / (1024 * 1024)
+        unit = "Mb"
+    else
+        val = val / (1024 * 1024 * 1024)
+        unit = "Gb"
 
-exports.first = function (arr) ->
+    strval = "#{Math.round val}"
+    return "#{val.toPrecision strval.length + 3}Kb"
+
+_filters.\first = (arr) ->
     return arr[0]
 
-exports.last = function (arr) ->
+_filters.\last = (arr) ->
     return null if not arr?.length
     arr[arr.length - 1]
 
-exports.groupby = function (arr, attribute) ->
+_filters.\groupby = (arr, attribute) ->
     # FIXME : Chain objects in array that have the same attribute.
     return _arr
 
-exports.join = function (arr, string) ->
+_filters.\join = (arr, string) ->
     i = 0
     _l = arr.length
     _res = ""
@@ -44,22 +56,28 @@ exports.join = function (arr, string) ->
         _res += arr[i].toString ()
     return _res
 
-exports.length = function (arr) ->
+_filters.\length = (arr) ->
     if not arr?
         return 0
     arr.length
 
-exports.lower = function (value) ->
+_filters.\lower = (value) ->
     value.toLowerCase ()
 
-exports.upper = function (value) ->
+_filters.\upper = (value) ->
     value.toUpperCase ()
 
-exports.replace = function (string, regexp, newvalue) ->
+_filters.\replace = (string, regexp, newvalue) ->
     string.replace regexp, newvalue
 
-exports.reverse = function (arr) ->
-    arr.reverse ()
+_filters.\reverse = (arr) ->
+    new_arr = arr.splice 0
+    new_arr.reverse()
+    return new_arr
 
-exports.round = function (value, precision) ->
-    value # FIXME
+_filters.\round = (value, precision) ->
+    precision ?= 0
+    value.toFixed precision
+
+_filters.\trim = (value) ->
+    value?.trim() ? ""

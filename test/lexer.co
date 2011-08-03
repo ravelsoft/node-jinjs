@@ -1,0 +1,55 @@
+#!/usr/bin/env coco
+Lexer = require \../src/lexer ; .Lexer
+default_tokens = require \../src/parser ; .default_tokens
+
+# Some terminal color definition.
+reset = "\x1B[0m"
+grey =    "\x1B[0;30m"
+red =     "\x1B[0;31m"
+green =   "\x1B[0;32m"
+yellow =  "\x1B[0;33m"
+blue =    "\x1B[0;34m"
+magenta = "\x1B[0;35m"
+cyan =    "\x1B[0;36m"
+white =   "\x1B[0;37m"
+bgrey =    "\x1B[1;30m"
+bred =     "\x1B[1;31m"
+bgreen =   "\x1B[1;32m"
+byellow =  "\x1B[1;33m"
+bblue =    "\x1B[1;34m"
+bmagenta = "\x1B[1;35m"
+bcyan =    "\x1B[1;36m"
+bwhite =   "\x1B[1;37m"
+
+failed_count = 0
+total_count = 0
+compare = (a1, a2) ->
+    if a1.length != a2.length
+        return false
+    for i from 0 to a1.length - 1
+        if a1[i] != a2[i]
+            return false
+    return true
+
+test = (str, result, message) ->
+    try
+        l = new Lexer tokens: default_tokens
+        l.feed str
+        r = []
+        while l.peek()
+            r.push l.next()
+
+    catch e
+        r = e.message
+    total_count := total_count + 1
+    if not compare r, result
+        failed_count := failed_count + 1
+        log "  #{bred}!!#{reset} #{str} #{bred}=>#{reset} #{red}#{r}#{reset} (#{yellow}#{result}#{reset})"
+    else
+        log "  #{bgreen}*#{reset} #{str} #{bgreen}=>#{reset} #{green}#{r}#{reset}"
+        
+
+log = console.log
+
+test "{%toto%}", ['{%', \toto, '%}']
+

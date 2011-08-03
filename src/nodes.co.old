@@ -1,0 +1,268 @@
+
+#  @param str  a string
+#  @returns    an escaped string suitable to be quoted.
+#
+function escape (str) ->
+    str.replace /\\/g, '\\\\' # Backslash escaping
+        .replace /["']/g, (str) -> # Quote escaping
+            "\\#{str}"
+        .replace '\n', '\\n' # New line escaping
+
+function trim (str) ->
+    str.replace /^\s*/, ""
+        .replace /\s*$/, ""
+
+#   The basic Node.
+#  
+function BasicNode (specs, that) ->
+    specs ?= {}
+    that ?= {}
+    that.specs = specs
+
+    that.compile = function (opts, ctx) ->
+        "_res += '#{specs.contents}';"
+
+    return that
+
+#   A list of nodes that are to be evaluated one after another.
+#  
+function NodeList (specs, that) ->
+    BasicNode specs, that
+
+    _last_is_string = false
+    nodes = []
+
+    that.compile = function (opts, ctx) ->
+        ctx = ctx || []
+        i = 0
+        res = ""
+        for node of nodes
+            res += node.compile opts, ctx
+        return res
+
+    that.push = function (node) ->
+        if node.charAt # node is a String
+            if _last_is_string
+                nodes[nodes.length - 1].specs.contents += escape node
+            else
+                nodes.push BasicNode( contents: escape node )
+            _last_is_string := true
+        else
+            _last_is_string := false
+            nodes.push node
+
+    that.nodes = nodes
+    return that
+
+
+#  The print statement's node. Ensures everything is outputted correctly,
+#  and changes undefined or null values to ''.
+#
+function NodePrint (specs, that) ->
+    BasicNode specs, that
+
+    that.compile = function (opts, ctx) ->
+        "_res += (#{make_expr specs.contents, ctx}) || '';"
+
+    return that
+
+re_let_varname = /\s*([a-zA-Z_]\w+)\s*=/
+
+#   Add a variable to the current context.
+#  
+function NodeLet (specs, that) ->
+    BasicNode specs, that
+
+    # console.log specs.contents
+    match = re_let_varname.exec specs.contents
+    if match is null 
+        throw "Let was expecting a correct variable name"
+
+    var_name = match[1]
+
+    that.compile = function (opts, ctx) ->
+        ctx.push var_name
+        return "#{specs.contents};"
+
+    return that
+
+##
+#
+function NodeTag (specs, that) ->
+    BasicNode specs, that
+
+    # Until is used to control until where a node will want to eat up input.
+    # If a tag has an input, it will go into that.inside.
+    # until = "none" is just a standalone tag (ie. {% let %})
+    # until = "endfile" puts the rest of the file into inside ({% extends %})
+    # until = "endtag" is until {% end... %} (id. {% if ... %}{% endif %}
+    that.until = "none"
+    return that
+
+re_macro_fn_name = /\s*([a-zA-Z_]\w+)\s*\((.*)\)/
+re_macro_arg_names = /[a-zA-Z_]\w+/g
+
+function NodeMacro (specs, that) ->
+    NodeTag specs, that
+    that.until = "endtag"
+
+    match = re_macro_fn_name.exec specs.contents
+    if match is null
+        throw "Macro declaration is invalid"
+
+    fn_name = match[1]
+    var_names = []
+
+    # This is not a replacement ; since "replace" allows us to iterate over
+    # all the matches, we use it to get all the variable names.
+    match[2].replace re_macro_arg_names, (s) ->
+        var_names.push (s)
+        return s
+
+    that.compile = function (opts, ctx) ->
+        _res = ""
+        
+        # Function is now available in current context.
+        ctx.push fn_name
+        # We copy the current context and add the variables names inside the new one
+        new_ctx = ctx.slice 0
+        for variable_name of var_names
+            new_ctx.push variable_name
+        
+        _res += "function #{specs.contents} { var _res = '';"
+        if that.inside then _res += that.inside.compile opts, new_ctx
+        _res += "return _res; }"
+
+        return _res
+
+    return that
+
+#  
+#   This node just outputs } else {
+#  
+function NodeElse (specs, that) ->
+    NodeTag specs, that
+
+    that.compile = function (opts, ctx) ->
+        "} else { "
+
+    return that
+
+
+#  
+#   The conditional node
+#  
+function NodeIf (specs, that) ->
+    NodeTag specs, that
+    that.until = "endtag";
+
+    condition = specs.contents
+
+    that.compile = function (opts, ctx) ->
+        res = "if (#{make_expr condition, ctx} {"
+        if that.inside then res += that.inside.compile opts, ctx
+        res += "} "
+        return res
+
+    return that
+
+
+#   A very simple node : does what it's told.
+#  
+function NodeDo (specs, that) ->
+    NodeTag specs, that
+
+    that.compile = function (opts, ctx) ->
+        "#{make_expr specs.contents};"
+
+    that.until = "none"
+    return that
+
+
+#   Similar to python's elif
+#  
+function NodeElseIf (specs, that) ->
+    NodeIf specs, that
+
+    condition = specs.contents
+
+    that.compile = function (opts, ctx) ->
+        " } else if (#{make_expr condition, ctx}) {"
+
+    that.until = "none"
+    return that
+
+
+re_for = /([a-zA-Z_]\w*)\s*(,\s*([a-zA-Z_]\w*))?\s*in\s*(.*)/
+
+#   A Node that emulates the for () { } statement.
+#  
+function NodeFor (specs, that) ->
+    NodeTag specs, that
+    that.until = "endtag"
+
+    m = re_for.exec specs.contents
+    if m is null
+        throw "For expression in invalid"
+    iterator = m[1]
+    value_iterator = m[3]
+    container_expression = m[4]
+
+    that.compile = function (opts, ctx) ->
+        opts ?= {}
+        ctx = ctx.slice 0
+        ctx.push iterator
+        if value_iterator then ctx.push value_iterator
+        # Adding a custom variable to the context.
+        ctx.push 'loop'
+
+        container = make_expr trim container_expression, ctx
+        res = ""
+
+        if value_iterator is undefined # For loop with only one variable, so in array
+            res += "(function () {                                  
+            i = 0;
+            var #{iterator} = null;
+            var __expr = #{container} || [];
+            var loop = {};
+            loop.length = __expr.length;
+            loop.callee = arguments.callee;
+            for (i = 0; i < __expr.length; i++) {
+                loop.index = i + 1; loop.index0 = i;
+                loop.first = i == 0; loop.last = i == __expr.length - 1;
+                #{iterator} = __expr[i];"
+
+            if that.inside then res += that.inside.compile opts, ctx
+
+            res += "} }) ();"
+        else
+            res += "(function () {
+            x = 0;
+            i = 0;
+            var #{iterator} = null;
+            var #{iterator_value} = null;
+            var __expr = #{container} || {};
+            var loop = {};
+            loop.callee = arguments.callee;
+            for (x in __expr) {
+                loop.index = i + 1; loop.index0 = i;
+                i += 1;
+                #{iterator} = x;
+                #{iterator_value} = __expr[x];"
+            if that.inside then res += that.inside.compile opts, ctx
+            res += "} }) ();"
+
+        return res
+
+    return that
+
+
+exports.nodes =
+    'if': NodeIf,
+    'else' : NodeElse,
+    'elseif' : NodeElseIf,
+    'do' : NodeDo,
+    'let' : NodeLet,
+    'for' : NodeFor,
+    'macro' : NodeMacro
+

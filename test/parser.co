@@ -1,0 +1,62 @@
+#!/usr/bin/env coco
+`#!/usr/bin/env node`
+
+{ Environment } = require \../lib/environment
+
+e = new Environment()
+log = console.log
+
+parse = (str) ->
+    log "==========="
+    try
+        log e.getTemplateSourceFromString str
+    catch e
+        console.log str
+        console.log e
+        throw e
+
+parse "{% let toto = 1 %}"
+parse "{% do toto = 1 %}"
+parse "{% if toto == tata %}TITI{% endif %}"
+parse "{% if toto == tata %}TITI{% else %}BLOUB{% endif %}"
+parse "{% if toto == tata %}TITI{% elseif blublu == prout %}BLAB{% else %}BLOUB{% endif %}"
+parse "{% for toto in plouf %}BLAB{% else %}BLOUB{% endfor %}"
+parse "{% for key, value in plouf %}BLAB{% else %}BLOUB{% endfor %}"
+parse "{% macro bab (bloub, blab=9) %}{{ bloub }} + BLABBLOUB{% endmacro %}"
+parse """
+{% macro bab (bloub, blab=9) %}
+    {# Parsing some nice bab #}
+    {{ bloub }}
+{% endmacro %}
+
+{{bab(4)}}
+"""
+
+parse "{{ toto + 2 }}"
+
+parse """
+{% extends "toto" %}
+
+{% block bl %}
+There is content in my block.
+{% endblock %}
+"""
+
+parse """
+
+{#- hep -#}
+
+cou
+
+
+{#- lonely comment -#}
+
+cou
+
+
+
+
+{#- empty -#}
+
+
+"""

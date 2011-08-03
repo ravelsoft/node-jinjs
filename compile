@@ -1,0 +1,172 @@
+#!./node_modules/.bin/coco
+
+fs = require "fs"
+path = require "path"
+Inotify = require "inotify"
+    .Inotify
+
+exec = require "child_process"
+    .exec
+
+optimist = require "optimist"
+    .usage "Compile all the necessary files of the project."
+    .boolean "help"
+    .alias "help", "h"
+    .describe "help", "You're staring at it."
+
+    .boolean "watch"
+    .alias "watch", "w"
+    .describe "watch", "Watch the source files for changes, and recompile when changes are detected."
+
+argv = optimist.argv
+
+if argv.help
+    console.log optimist.help()
+    process.exit 0
+
+function dirwalk (dirname, callback) ->
+    callback dirname
+    for f of fs.readdirSync dirname
+        if f[0] != "." and fs.statSync("#{dirname}/#{f}").isDirectory()
+            dirwalk "#{dirname}/#{f}", callback
+
+function walkcond (dirname, pattern, callback) ->
+    for f of fs.readdirSync dirname
+        path = "#{dirname}/#{f}"
+        if path.match pattern
+            callback path
+        if f[0] != "." and  fs.statSync(path).isDirectory()
+            walkcond path, pattern, callback
+
+_to_finish_executing = 0
+_to_do_next = []
+function execute (command, callback) ->
+    _to_finish_executing := _to_finish_executing + 1
+    console.log command
+    env = {}
+    env <<< process.env
+    env.PATH = "./node_modules/.bin:" + env.PATH
+    exec command, env: env ,(error, stdout, stderr) ->
+        console.log "stderr: #{stderr}" if stderr
+        if error is not null
+            console.log "EXEC ERROR: #{error}"
+
+        if callback
+            callback error, stdout, stderr
+
+        _to_finish_executing := _to_finish_executing - 1
+        # Copying the callbacks
+        if _to_finish_executing == 0
+            to_do_next = (cb for cb of _to_do_next)
+            _to_do_next := []
+            for cb of to_do_next
+                cb ()
+
+function wait_for_current_executions (callback) ->
+    if _to_finish_executing > 0
+        _to_do_next.push callback
+    else
+        callback()
+
+
+pegjs = require "pegjs"
+coco = require "coco"
+compile_grammar = (file) ->
+    console.log "Recompiling Grammar"
+    (err, data) <- fs.readFile "./src/#{file}.pegco", "utf-8"
+    throw err if err
+
+    # Compile all the coco parts to JS before giving it to pegjs.
+    cocoed_data = data.replace //
+            \.{
+               (.|\n)*?
+            }\.//gm, (txt) ->
+
+        coco_data = txt.replace /^\.{\s*/, ""
+            .replace /\s*}\.$/, ""
+ 
+        try
+            compiled = coco.compile coco_data, bare: true
+        catch e
+            throw e
+        return "{#{compiled}}"
+
+    try
+        parser = pegjs.buildParser cocoed_data
+    catch e
+        console.log e.message
+        console.dir e
+        return
+    
+    grammar_source = parser.toSource()
+
+    (err, data) <- fs.readFile "./src/#{file}-grammar.co_", "utf-8"
+    throw err if err
+
+    try
+        js = coco.compile data
+    catch e
+        console.log e.message
+        return
+
+    final_data = js.replace /__grammar__/, grammar_source
+
+    (err) <- fs.writeFile "./lib/#{file}.js", final_data
+    throw err if err
+
+
+walkcond "./src", /\.co$/, (fname) ->
+    out_dir = fname.replace /src/ "lib"; .replace /\/[^\/]*$/ ""
+    execute "coco -o #{out_dir} -cb #{fname}"
+
+<- wait_for_current_executions
+
+compile_grammar \expression
+
+<- wait_for_current_executions
+
+if argv.watch
+    inotify = new Inotify()
+
+    _watches = {}
+
+    addWatch = function (watch) ->
+        (dirname) <- dirwalk watch.path
+        if not _watches[dirname]?
+            _watches[dirname] = []
+
+            new_watch =
+                path: "#{process.cwd ()}/#{dirname}"
+                watch_for: Inotify.IN_MODIFY
+                callback: (evt) ->
+                    cur_pwd = process.cwd ()
+
+                    for action of _watches[dirname]
+                        if evt.name.match action.pattern
+                            action.callback dirname, evt
+
+                    process.chdir (cur_pwd)
+
+            inotify.addWatch new_watch
+
+        _watches[dirname].push callback:watch.callback, pattern:watch.pattern
+
+    addWatch do
+        path: "./src",
+        pattern: /.*\.co$/,
+        callback: (path, event) ->
+            cmd = "coco -o #{path.replace "src", "lib"} -bc #{path}/#{event.name}"
+            execute cmd
+            # console.log path, event.name
+            # Compile fucking files.
+
+    pegjs = require "pegjs"
+
+    addWatch do
+        path: "./src"
+        pattern: /.*\.(co_|pegco)$/
+        callback: (path, event) ->
+            compile_grammar()
+
+    console.log "Watching " + (for x in _watches then x).join(" ") + " for changes."
+

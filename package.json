@@ -16,7 +16,7 @@
     ],
     "engines"     : {"node": ">=0.4.0"},
     "directories" : {"lib" : "./lib"  },
-    "main" : "./lib/jinjs_prev",
+    "main" : "./lib/main",
     "bin" : {
         "jinjs" : "./lib/command.js"
      },
@@ -25,6 +25,7 @@
      },
      "devDependencies" : {
         "pegjs": ">=0.6.0",
-        "coco": "0.5.4"
+        "coco": "0.5.4",
+        "inotify": "latest"
      }
 }

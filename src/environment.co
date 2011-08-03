@@ -1,67 +1,35 @@
-exports.default_env = filters: {}
-_filters = exports.default_env.filters
+{ Parser } = require \./parser
+{ render: render_template } = require \./module_template
 
-_filters["in"] = (obj, arr) ->
-    x = null
-    for x in arr
-        if arr.hasOwnProperty (x) and obj is arr[x]
-            return true
-    return false
+class Environment
+    $evalTemplateObject = (t, env) ->
+        environment = env
+        return eval t
 
-_filters.abs = function (num) ->
-    return -num if num < 0
-    num
+    (specs) ->
+        specs ?= {}
+        @filter_exp = specs.filter_exp
+        @require_exp = specs.require_exp
+        @parser = specs.parser ? new Parser()
 
-_filters.capitalize = function (str) ->
-    return str.charAt(0).toUpperCase() + str.slice(1)
+    getTemplate: (str) ->
 
-_filters["default"] = (value, default_value) ->
-    return default_value if value is undefined
-    value
+    getTemplateSource: (str) ->
 
-_filters.filesizeformat = function (value) ->
-    # FIXME : value is a number, make it smaller to get
-    # xxMb, xxGb, xxKb
-    return value
+    getTemplateFromString: (str) ->
 
-_filters.first = function (arr) ->
-    return arr[0]
+    getTemplateSourceFromString: (str) ->
+        ast = @parser.parse str
+        opts = __indent__: 1
 
-_filters.last = function (arr) ->
-    return null if not arr?.length
-    arr[arr.length - 1]
+        body = ast.compile opts, {}
+        opts <<< { body, @filter_exp, @require_exp }
+        return render_template opts
 
-_filters.groupby = function (arr, attribute) ->
-    # FIXME : Chain objects in array that have the same attribute.
-    return _arr
 
-_filters.join = function (arr, string) ->
-    i = 0
-    _l = arr.length
-    _res = ""
+exports import {
+    defaultEnvironment: new Environment()
+    fileOutputEnvironment: new Environment filters: "require('jinjs/lib/filters')", loader: "require"
+    Environment
+    }
 
-    for i from 0 to l - 1
-        if i > 0
-            _res += string
-        _res += arr[i].toString ()
-    return _res
-
-_filters.length = function (arr) ->
-    if not arr?
-        return 0
-    arr.length
-
-_filters.lower = function (value) ->
-    value.toLowerCase ()
-
-_filters.upper = function (value) ->
-    value.toUpperCase ()
-
-_filters.replace = function (string, regexp, newvalue) ->
-    string.replace regexp, newvalue
-
-_filters.reverse = function (arr) ->
-    arr.reverse ()
-
-_filters.round = function (value, precision) ->
-    value # FIXME

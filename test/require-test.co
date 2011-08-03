@@ -1,0 +1,18 @@
+#!/usr/bin/env coco
+{ registerExtension } = require \../lib/helpers
+{ defaultEnvironment } = require \../lib/environment
+defaultEnvironment.filter_exp = "require('../../lib/filters')"
+
+log = console.log
+{ print } = require \sys
+
+registerExtension \.tpl
+
+display = (tpl, ctx) ->
+    { render } = require tpl
+    log "--->"
+    print render ctx
+
+display \./templates/test-1, variable: "defined"
+display \./templates/test-include
+display \./templates/test-extend

@@ -1,0 +1,114 @@
+                    
+
+
+/**
+ *  A Lexer.
+ *
+ *  Use Lexer.feed (str) to input a string for it to break it down.
+ *  Use Lexer.next () to get the next token.
+ *  Use Lexer.peek () to see a future token without advancing in the stream.
+ *
+ *  This Lexer does NOT use regular expression but simple strings for speed.
+ */
+class Lexer
+    /**
+     *  Sort function for token sorting. Orders the array so that
+     *  the first element in the next token in the string (aka, its
+     *  position is the lowest one). In case of having two tokens
+     *  at the same position - because they start the same - put first
+     *  the longest one, so that, for exemple, == comes before =.
+     *
+     *  @param a: First Operand
+     *  @param b: Second Operand
+     *  @returns 1, 0 or -1
+     */
+    __token_sort = function (a, b) ->
+        if a.pos == -1 
+            return 1 # -1 is bigger than everyone !
+        if b.pos == -1 
+            return -1
+
+        if a.pos < b.pos
+            return -1
+        if a.pos == b.pos
+            if a.tok.length > b.tok.length
+                return -1
+            if a.tok.length < b.tok.length
+                return 1
+            return 0
+        return 1
+
+    /**
+     *
+     */
+    (specs) ->
+        @input = null
+        @position = 0
+        @lineno = 0
+
+        @tokens_order = ( (tok: token, pos: -1) for token of specs.tokens)
+
+    computeTokenPositions: function ->
+        for token of @tokens_order
+            token.pos = @input.indexOf token.tok, @position
+        @tokens_order.sort __token_sort
+
+    feed: function (str) ->
+        @input = str
+        @position = 0
+        @lineno = 0
+        @computeTokenPositions()
+
+    advance: function (to_position) ->
+        res = @input.slice @position, to_position
+        @position = to_position
+        return res
+
+    advanceCurrentToken: function ->
+        next_token = @tokens_order.0
+
+        if next_token.tok == "\n"
+            @lineno += 1
+
+        res = @advance @position + next_token.tok.length
+        @computeTokenPositions()
+        return res
+
+    /**
+     *  Return the next token in the input stream.
+     */
+    next: function ->
+        if not @input?
+            throw message: "Lexer has not been fed an input."
+
+        if @_cached_next !== undefined
+            result = @_cached_next
+            @_cached_next = undefined
+            return result
+            
+        if @position >= @input.length # End of the feed.
+            return null
+        
+        next_token = @tokens_order.0
+
+        # No more tokens, we just send the rest of the string.
+        if next_token.pos == -1 
+            return @advance @input.length
+
+        if next_token.pos == @position
+            # Return the token we're on
+            return @advanceCurrentToken()
+        else
+            # Return the text between the actual position and the next token.
+            return @advance next_token.pos
+
+    /**
+     *  Return the next token in the input stream, and cache its result, so that
+     *  every subsequents call to peek and the next call to next() return the same token
+     */
+    peek: function ->
+        if @_cached_next == undefined
+            @_cached_next = @next()
+        return @_cached_next
+
+exports.Lexer = Lexer

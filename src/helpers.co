@@ -1,0 +1,23 @@
+{ defaultEnvironment } = require \./environment
+{ readFileSync } = require \fs
+
+/**
+ *  Register an extension to use with NodeJS, so that require-ing a
+ *  template transforms it automatically into a template.
+ *  @param ext: the extension
+ *  @param filter: a callback (str) -> that transforms the source before
+ *      giving it to JinJS.
+ */
+function registerExtension (ext, filter) ->
+    filter ?= (str) -> str
+
+    require.extensions[ext] = (module, filename) ->
+        # Call directly taken from coco.
+        javascript_file = defaultEnvironment.getTemplateSourceFromString filter readFileSync filename, \utf-8
+        # console.log javascript_file
+        module._compile javascript_file, filename
+
+# registerExtension \.pwi, (str) -> pwilang.parse str
+# registerExtension \.pwx, (str) -> pwilang.parse str
+
+exports import { registerExtension }
