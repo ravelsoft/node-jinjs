@@ -68,11 +68,12 @@ object_literal
     = LBRACE args:object_arguments? RBRACE .{ return "{ #{args} }" }.
 
 object_arguments
-    = object_argument COMMA object_arguments
+    = a:object_argument COMMA args:object_arguments .{ return "#{a}, #{args}" }.
     / object_argument
 
 object_argument
-    = identifier COLON expression
+    = i:identifier COLON e:expression .{ return "#{i}: #{e}" }.
+    / s:string COLON e:expression .{ return "#{s}: #{e}" }.
 
 array_literal
     = LBRACKET args:call_arguments? RBRACKET .{ return "[#{args}]" }.

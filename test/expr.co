@@ -83,3 +83,12 @@ test 'toto in tata', "__in(toto, tata)"
 test 'toto in tata ? toto : null', "(__in(toto, tata) ? toto : null)"
 test 'toto instanceof tata', "toto instanceof tata"
 test 'toto + tata', "toto + tata"
+test '{ a: 1, b: "toto", "coucou": f|g }', '{ a: 1, b: "toto", "coucou": __filter__["g"](__ctx__.f) }'
+
+#failed_count = 0
+#total_count = 0
+
+if failed_count > 0
+    log "\n#{bred}/!\#{reset} succeeded #{bred}#{total_count - failed_count}#{reset}#{bgreen} / #{total_count}#{reset} tests"
+else
+    log "\n#{bgreen}==>#{reset} succeeded #{bgreen}#{total_count - failed_count} / #{total_count}#{reset} tests"
