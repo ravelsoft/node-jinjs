@@ -84,6 +84,7 @@ test 'toto in tata ? toto : null', "(__in(toto, tata) ? toto : null)"
 test 'toto instanceof tata', "toto instanceof tata"
 test 'toto + tata', "toto + tata"
 test '{ a: 1, b: "toto", "coucou": f|g }', '{ a: 1, b: "toto", "coucou": __filter__["g"](__ctx__.f) }'
+test '  toto == tata  ', 'toto == tata'
 
 #failed_count = 0
 #total_count = 0

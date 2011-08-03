@@ -10,7 +10,7 @@
         return res
 
 expression
-    = space? t:ternary_operator -> 
+    = space? t:ternary_operator space? -> 
         return t
 
 ternary_operator
