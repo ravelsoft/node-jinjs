@@ -4,10 +4,10 @@
     "keywords" : ["language", "compiler", "templating", "pwilang", "html", "xml", "jinjs"],
     "author" : "Christophe Eymard <christophe.eymard@ravelsoft.com> (http://www.ravelsoft.com)",
     "version" : "0.2.0",
-    "homepage" : "http://www.ravelsoft.com/",
+    "homepage" : "http://bitbucket.org/ravelsoft/node-jinjs",
     "repository" : {
         "type": "hg", 
-        "url": "https://jinjs.googlecode.com/hg/"
+        "url": "https://bitbucket.org/ravelsoft/node-jinjs"
     },
     "licenses" : [ {   
             "type" : "MIT",
