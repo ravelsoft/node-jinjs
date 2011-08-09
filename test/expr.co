@@ -79,27 +79,27 @@ suite.addBatch do
 
     "Filters": do
         "can be named even with reserved words": ->
-            equal make("va|default"), "__filter__[\"default\"](__ctx__.va)"
+            equal make("va|default"), "__filter_default(__ctx__.va)"
         "An OOC variable through a filter": ->
-            equal make("variable|filtre"), "__filter__[\"filtre\"](__ctx__.variable)"
+            equal make("variable|filtre"), "__filter_filtre(__ctx__.variable)"
         "Dotted variable through a filter": ->
-            equal make("toto.tata(4)|filtre"), "__filter__[\"filtre\"](toto.tata(4))"
+            equal make("toto.tata(4)|filtre"), "__filter_filtre(toto.tata(4))"
         "Filter taking an argument": ->
-            equal make("variable|filtre(2)"), "__filter__[\"filtre\"](__ctx__.variable, 2)"
+            equal make("variable|filtre(2)"), "__filter_filtre(__ctx__.variable, 2)"
         "Filter with several arguments, one of which an OOC var": ->
-            equal make("variable|filtre(2, toto)"), "__filter__[\"filtre\"](__ctx__.variable, 2, toto)"
+            equal make("variable|filtre(2, toto)"), "__filter_filtre(__ctx__.variable, 2, toto)"
         "Simple filter chaining": ->
-            equal make("v|f|g"), "__filter__[\"g\"](__filter__[\"f\"](__ctx__.v))"
+            equal make("v|f|g"), "__filter_g(__filter_f(__ctx__.v))"
         "More complex filter chaining + arguments": ->
-            equal make("variable|filtre(2 + tata, prout * toto)|another"), "__filter__[\"another\"](__filter__[\"filtre\"](__ctx__.variable, 2 + tata, __ctx__.prout * toto))"
+            equal make("variable|filtre(2 + tata, prout * toto)|another"), "__filter_another(__filter_filtre(__ctx__.variable, 2 + tata, __ctx__.prout * toto))"
         "Another complex filtering expression": ->
-            equal make("variable|filtre(2 + tata|boup, prout * toto)"), "__filter__[\"filtre\"](__ctx__.variable, 2 + __filter__[\"boup\"](tata), __ctx__.prout * toto)"
+            equal make("variable|filtre(2 + tata|boup, prout * toto)"), "__filter_filtre(__ctx__.variable, 2 + __filter_boup(tata), __ctx__.prout * toto)"
         "Arithmetics with a filter": ->
-            equal make("2 + tata|boup"), "2 + __filter__[\"boup\"](tata)"
+            equal make("2 + tata|boup"), "2 + __filter_boup(tata)"
         "More complex arithmetics with filters": ->
-            equal make('toto|filtre(3) == 2'), '__filter__["filtre"](toto, 3) == 2'
+            equal make('toto|filtre(3) == 2'), '__filter_filtre(toto, 3) == 2'
         "Filtered function call": ->
-            equal make('f()|filtre'), '__filter__["filtre"](__ctx__.f())'
+            equal make('f()|filtre'), '__filter_filtre(__ctx__.f())'
 
     "Arrays and indexing": do
         "Empty Array": ->
@@ -139,11 +139,11 @@ suite.addBatch do
         "Can be empty (with space)": ->
             equal make(' {  } '), '{}'
         "Can be created with regular labels, string labels and complex expressions": ->
-            equal make('{ a: 1, b: "toto", "coucou": f|g }'), '{ a: 1, b: "toto", "coucou": __filter__["g"](__ctx__.f) }'
+            equal make('{ a: 1, b: "toto", "coucou": f|g }'), '{ a: 1, b: "toto", "coucou": __filter_g(__ctx__.f) }'
 
     "More complex tests involving mixing of previous ones": do
         "Function calls + filtered expression as argument": ->
-            equal make("a(b(1|fi))"), "a(__ctx__.b(__filter__[\"fi\"](1)))"
+            equal make("a(b(1|fi))"), "a(__ctx__.b(__filter_fi(1)))"
 
     "Expressions": do
         "Can have space around them": ->

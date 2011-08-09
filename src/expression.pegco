@@ -131,7 +131,7 @@ primary_identifier
 /* Used for filters 
 */
 filter_name
-    = ident:filter_identifier -> return "__filter__[\"#{ident}\"]" 
+    = ident:filter_identifier -> return "__filter_#{ident}" 
 filter_identifier
     = first:[_a-zA-Z] next:[_a-zA-Z0-9]* -> return "#{first}#{if next then next.join "" else ""}"
 

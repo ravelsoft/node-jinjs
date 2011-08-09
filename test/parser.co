@@ -14,7 +14,7 @@ optimist = require \optimist
 { argv } = optimist
 
 { Environment } = require \../lib/environment
-e = new Environment filter_exp: 'require(\"../lib/filters\")'
+e = new Environment filter_exp: 'require(\"../lib/filters\")', util_exp: 'require(\"../lib/utils\")'
 
 test_context = do
     foo: "foo"
@@ -155,6 +155,11 @@ suite.addBatch do
         "displays the string result of an expression": ->
             res = _parse "{{ foo }}"
             equal res.txt, 'foo'
+
+    "The |filters": do
+        "allow us to pass values through functions differently": ->
+            res = _parse "{{ bobo|default('bobo is not defined') }}"
+            equal res.txt, 'bobo is not defined'
 
     "The {% macro %} tag": {}
 

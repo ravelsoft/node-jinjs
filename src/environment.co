@@ -10,6 +10,7 @@ class Environment
         specs ?= {}
         @filter_exp = specs.filter_exp
         @require_exp = specs.require_exp
+        @util_exp = specs.util_exp
         @parser = specs.parser ? new Parser()
 
     getTemplate: (str) ->
@@ -23,7 +24,7 @@ class Environment
         opts = __indent__: 1
 
         body = ast.compile opts, {}
-        opts <<< { body, @filter_exp, @require_exp }
+        opts <<< { body, @filter_exp, @require_exp, @util_exp }
         return render_template opts
 
 
