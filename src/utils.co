@@ -1,0 +1,60 @@
+function __for (__ctx__, condition, keyname, valuename, childcode, elsenode) ->
+    i = 0
+    _ref = null
+    _prev_loop = __ctx__.loop
+    _prev_key = __ctx__[keyname]
+    _prev_value = null
+    x = null
+    loop = null
+
+    if (!valuename) # We iterate over an array.
+        _ref = condition || []
+        loop = (__ctx__.loop = {length: _ref.length, callee: arguments.callee})
+
+        for i from 0 to loop.length - 1
+            loop.index = i + 1; loop.index0 = i
+            loop.first = (i == 0); loop.last = (i == loop.length - 1)
+            __ctx__[keyname] = _ref[i]
+            childcode() if childcode?
+    else
+        _ref = condition ? {}
+        x = ''
+        i = 0
+        _prev_value = __ctx__[valuename]
+        loop = (__ctx__.loop = (callee: arguments.callee))
+
+        for x in _ref
+            if _ref.hasOwnProperty(x)
+                loop.index0 = i
+                loop.index = i + 1
+                __ctx__[keyname] = x
+                __ctx__[valuename] = _ref[x]
+                childcode() if childcode?
+                i += 1
+
+        __ctx__[valuename] = _prev_value
+
+    if elsenode?
+        elsenode()
+
+    __ctx__.loop = _prev_loop
+    __ctx__[keyname] = _prev_key
+
+function __in (obj, container) ->
+    if obj instanceof Array
+        return __indexOf.call(container, obj) > -1
+
+    return container[obj]?
+
+__indexOf = [].indexOf ? (x) ->
+    for i from @length - 1 to 0
+        if this[i] is x
+            return i
+
+function __import (obj, src) ->
+    own = {}.hasOwnProperty
+    for key in src 
+        obj[key] = src[key] if own.call src, key
+    return obj
+
+exports <<< { __in, __for, __import, __indexOf }
