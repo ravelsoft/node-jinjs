@@ -8,10 +8,13 @@
 
             res = "#{f.name}(#{res}#{args})"
         return res
+    # Tokens we don't want to encounter as variables
+    reserved_words = [ "abstract", "as", "boolean", "break", "byte", "case", "catch", "char", "class", "continue", "const", "debugger", "default", "delete", "do", "double", "else", "enum", "export", "extends", "false", "final", "finally", "float", "for", "function", "goto", "if", "implements", "import", "in", "instanceof", "int", "interface", "is", "long", "namespace", "native", "new", "null", "package", "private", "protected", "public", "return", "short", "static", "super", "switch", "synchronized", "this", "throw", "throws", "transient", "true", "try", "typeof", "use", "var", "void", "volatile", "while", "with" ]
 
 expression
     = space? t:ternary_operator space? -> 
         return t
+    / space? -> return ''
 
 ternary_operator
     = p:operation QUESTION_MARK e1:ternary_operator COLON e2:ternary_operator -> return "(#{p} ? #{e1} : #{e2})"
@@ -25,39 +28,73 @@ operation
     / filter_expression
 
 filter_expression
-    # A single line comment.
-    = expr:function_expression f:filter_rec -> return make_filter expr, f 
-    / function_expression
+    = expr:member_expression f:filter_rec -> return make_filter expr, f 
+    / member_expression
 
 filter_rec
     = lit:filter_literal r:filter_rec -> return [].concat lit, r 
     / filter_literal
 
-function_expression
-    = expr:dot_expression LPAREN args:call_arguments? RPAREN DOT i:dotted_identifier -> return "#{expr}(#{args}).#{i}" 
-    / expr:dot_expression LPAREN args:call_arguments? RPAREN -> return "#{expr}(#{args})" 
-    / dot_expression
+filter_literal
+    = PIPE name:filter_name LPAREN args:call_arguments? RPAREN -> return [name: name, args: args] 
+    / PIPE name:filter_name -> return [name: name] 
 
 call_arguments
     = e:expression COMMA c:call_arguments -> return "#{e}, #{c}" 
     / expression
 
-dot_expression
-    = p:array_index_expression DOT i:dotted_identifier -> return p + "." + i 
-    / p:array_index_expression
+function_call
+    = LPAREN args:call_arguments? RPAREN -> return "(#{args})"
 
-dotted_identifier
-    = i:identifier arr:array_literal? DOT i2:dotted_identifier -> return i + arr + "." + i2 
-    / i:identifier arr:array_literal? -> return i + arr 
+function_call_rec
+    # So that we can do f()()()
+    = f:function_call rec:function_call_rec -> return f + rec
+    # This rule is to allow for fun().member, fun().member()()()
+    / f:function_call DOT member:ic_member_expression_rec -> return "#{f}.#{member}"
+    # Allowing ()[a]
+    / f:function_call a:array_indexing_rec -> return f + a
+    / function_call
 
-array_index_expression
-    = p:primary_expression LBRACKET exp:expression RBRACKET -> return "#{p}[#{exp}]" 
-    / primary_expression
+array_index
+    # When indexing, can't leave []
+    = LBRACKET contents:call_arguments RBRACKET -> return "[#{contents}]"
 
+array_indexing_rec
+    # [a][b]
+    = a:array_index rec:array_indexing_rec -> return a + rec
+    # [a].toto
+    / a:array_index DOT member:ic_member_expression_rec -> return "#{a}.#{member}"
+    # [a]()
+    / a:array_index f:function_call_rec -> return a + f
+    / array_index
+
+member_expression
+    = p:ooc_primary_expression DOT i:ic_member_expression_rec -> return p + "." + i 
+    / p:ooc_primary_expression arr:array_indexing_rec  -> return "#{p}#{arr}" 
+    / expr:ooc_primary_expression f:function_call_rec -> return "#{expr}#{f}" 
+    / ooc_primary_expression
+
+ooc_primary_expression
+    = primary_expression
+    / i:primary_identifier -> return i
+
+ic_member_expression_rec
+    = xp:ic_member_expression DOT rec:ic_member_expression_rec -> return "#{xp}#{rec}"
+    / ic_member_expression
+
+# In context member expression : no escaping with __ctx__
+ic_member_expression
+    = p:ic_primary_expression DOT i:ic_member_expression -> return p + "." + i 
+    / p:ic_primary_expression arr:array_indexing_rec -> return "#{p}#{arr}" 
+    / expr:ic_primary_expression f:function_call_rec -> return "#{expr}#{f}" 
+    / ic_primary_expression
+
+ic_primary_expression
+    = primary_expression
+    / i:identifier -> return i
 
 primary_expression
     = special_value
-    / primary_identifier
     / object_literal
     / array_literal
     / number
@@ -66,7 +103,7 @@ primary_expression
     / LPAREN e:expression RPAREN -> return "(#{e})"
 
 object_literal
-    = LBRACE args:object_arguments? RBRACE -> return "{ #{args} }"
+    = LBRACE args:object_arguments? RBRACE -> return "{#{if args then " " + args + " " else ''}}"
 
 object_arguments
     = a:object_argument COMMA args:object_arguments -> return "#{a}, #{args}" 
@@ -80,20 +117,23 @@ array_literal
     = LBRACKET args:call_arguments? RBRACKET -> return "[#{args}]" 
 
 identifier
-    = first:[$a-zA-Z_] rest:[$a-zA-Z_0-9]* -> return "#{first}#{rest.join ""}" 
+    = first:[$a-zA-Z_] rest:[$a-zA-Z_0-9]* -> 
+        ident = "#{first}#{if rest then rest.join "" else ""}"
+        if ident of reserved_words
+            throw new JinJSParseError "can't use '#{ident}' as a variable name"
+        return ident
 
 /* Used for any variable of function name */
 primary_identifier
     = ident:identifier -> return if ident in compilation_ctx then "#{ident}" else "__ctx__.#{ident}" 
 
-filter_literal
-    = PIPE name:filter_name LPAREN args:call_arguments? RPAREN -> return [name: name, args: args] 
-    / PIPE name:filter_name -> return [name: name] 
 
 /* Used for filters 
 */
 filter_name
-    = ident:identifier -> return "__filter__[\"#{ident}\"]" 
+    = ident:filter_identifier -> return "__filter__[\"#{ident}\"]" 
+filter_identifier
+    = first:[_a-zA-Z] next:[_a-zA-Z0-9]* -> return "#{first}#{if next then next.join "" else ""}"
 
 number
     = f:[0-9]+ d:"." s:[0-9]+ -> return "#{f.join ""}#{d}#{s.join ""}" 
@@ -162,7 +202,7 @@ PIPE
 DOT
     = space? "." space? -> return "." 
 IN
-    = space "in" space -> return " in " 
+    = space? "in" space? -> return " in " 
 ASSIGN
     = space? "=" space? -> return " = " 
 
@@ -190,7 +230,7 @@ POST_UNARY_OPERATOR
 binary
     # FIXME will probably need to make it so that the textual binary
     # operators can have not only space but also parentheses.
-    = space op:TEXT_BINARY_OPERATOR space ->
+    = space? op:TEXT_BINARY_OPERATOR space? ->
         return " #{op} " 
 
     / space? op:BINARY_OPERATOR space? -> return " #{op} "
@@ -243,6 +283,7 @@ SPECIAL
     / "void"
     / "null"
     / "undefined"
+
 
 #######################################################################
 ##

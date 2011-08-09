@@ -1,27 +1,165 @@
 #!/usr/bin/env coco
-`#!/usr/bin/env node`
+{ make_expression } = require \../lib/expression
+
+{ fail, ok, equal, notEqual, deepEqual, notDeepEqual, strictEqual, notStrictEqual, throws, doesNotThrow, ifError } = require \assert
+{ EventEmitter } = require \events
+{ JinJSParseError } = require \../lib/nodes
+
+optimist = require \optimist
+    .usage "$0: run the test suite."
+    .alias \verbose, \v
+    .alias \help, \h
+    .describe \verbose, "Show all the tests"
+    .describe \help, "You're staring at it"
+{ argv } = optimist
 
 { Environment } = require \../lib/environment
+e = new Environment filter_exp: 'require(\"../lib/filters\")'
 
-e = new Environment()
-log = console.log
+test_context = do
+    foo: "foo"
+    bar: "bar"
+    one: 1
 
-parse = (str) ->
-    log "==========="
+run = (str, ctx) ->
     try
-        log e.getTemplateSourceFromString str
+        exports = {} # Necessary to get the render() function
+        compiled = e.getTemplateSourceFromString str
+        eval compiled
+        result = exports.render ctx
+        return result
     catch e
-        console.log str
-        console.log e
+        if e instanceof SyntaxError
+            console.log compiled
         throw e
 
-parse "{% let toto = 1 %}"
-parse "{% do toto = 1 %}"
-parse "{% if toto == tata %}TITI{% endif %}"
-parse "{% if toto == tata %}TITI{% else %}BLOUB{% endif %}"
-parse "{% if toto == tata %}TITI{% elseif blublu == prout %}BLAB{% else %}BLOUB{% endif %}"
-parse "{% for toto in plouf %}BLAB{% else %}BLOUB{% endfor %}"
-parse "{% for key, value in plouf %}BLAB{% else %}BLOUB{% endfor %}"
+function parse (txt, ctx) ->
+    return ->
+        ctx ?= {} <<< test_context
+        res = run txt, ctx
+        return txt: res, ctx: ctx
+
+_parse = (txt, ctx) -> (parse txt, ctx)()
+parseError = (fn) -> throws fn, JinJSParseError
+
+suite = require \vows ; .describe "Expressions Test Suite"
+
+
+suite.addBatch do
+    "The {% let %} tag": do
+        topic: parse "{% let toto = 1 %}TXT"
+
+        "Lets us assign to a variable that is later exported": (res) ->
+            equal res.ctx.toto, 1
+
+        "Does not output anything": (res) ->
+            equal res.txt, 'TXT'
+
+        "does not let us assign to reserved-words variables": (res) ->
+            parseError -> _parse "{% let instanceof = 3 %}"
+
+    ##
+    ##  IF TAG
+    ##
+
+    "The {% if %} and {% elseif %} tags": do
+
+        "displays text when its condition is met": ->
+            res = _parse "{% if one == 1 %}TXT{% endif %}"
+            equal res.txt, 'TXT'
+
+        "does not display text if its condition is not met": ->
+            res = _parse "{% if one == 2 %}TXT{% endif %}"
+            equal res.txt, ''
+
+        "displays its first close if its condition is met": ->
+            res = _parse "{% if one == 1 %}TXT{% else %}FOO{% endif %}"
+            equal res.txt, 'TXT'
+        
+        "displays its else close if its condition is not met": ->
+            res = _parse "{% if one == 2 %}TXT{% else %}FOO{% endif %}"
+            equal res.txt, 'FOO'
+
+        "can have several ifelse clauses": ->
+            res = _parse "{% if one == 2 %}TXT{% elseif one == 1 %}FO1{% elseif one == 3 %}FO3{% else %}FOO{% endif %}"
+            equal res.txt, 'FO1'
+
+        "can not be condition-less": ->
+            throws (-> _parse "{% if %}TXT{% endif %}"), JinJSParseError
+            throws (-> _parse "{% if one == 1 %}TXT{% elseif %}{% endif %}"), JinJSParseError
+
+    ##
+    ##  FOR TAG
+    ##
+
+    "The {% for %} tag": do
+
+        "is of the form <variable> in <array>": ->
+            throws (-> _parse "{% for in toto %}TXT{% endfor %}"), JinJSParseError
+            doesNotThrow -> _parse "{% for value in toto %}TXT{% endfor %}"
+
+        "is used to iterate over an array": ->
+            res = _parse "{% for val in [4, 5, 4] %}{{ val }}{% endfor %}"
+            equal res.txt, '454'
+
+        "has a {{ loop.index0 }} variable": ->
+            res = _parse "{% for val in [4, 5, 4] %}{{ loop.index0 }}{% endfor %}"
+            equal res.txt, '012'
+            
+        "has a {{ loop.index }} variable": ->
+            res = _parse "{% for val in [4, 5, 4] %}{{ loop.index }}{% endfor %}"
+            equal res.txt, '123'
+
+        "has a {{ loop.first }} variable": ->
+            res = _parse "{% for val in [4, 5, 6] %}{% if loop.first %}F{% endif %}{{ loop.index }}{% endfor %}"
+            equal res.txt, 'F123'
+            
+        "has a {{ loop.last }} variable": ->
+            res = _parse "{% for val in [4, 5, 6] %}{% if loop.last %}L{% endif %}{{ loop.index }}{% endfor %}"
+            equal res.txt, '12L3'
+            
+        "is also of the form <key>, <value> in <object>": ->
+            doesNotThrow -> _parse "{% for key, value in toto %}TXT{% endfor %}"
+            
+        "outputs keys and values of objects": ->
+            res = _parse "{% for key, val in {a: 1, b: 2} %}{{ key }}:{{val}} {% endfor %}"
+            equal res.txt, 'a:1 b:2 '
+
+        "accepts the empty object and does not output anything": ->
+            res = _parse "{% for key, val in { } %}{{ key }}:{{val}} {% endfor %}"
+            equal res.txt, ''
+
+        "can have another {% for %} inside without messing up the variables": ->
+            res = _parse "{% for key, val in {a:1, b:2} %}{% for key in [1,2,3] %}{{ key }}{% endfor %}{{ key }}:{{val}}{% endfor %}"
+            equal res.txt, '123a:1123b:2'
+
+        "does not leave its variable in the environment": ->
+            res = _parse "{% for key, val in { } %}{{ key }}:{{val}} {% endfor %}"
+            equal res.ctx.key, undefined
+            equal res.ctx.val, undefined
+
+
+        # Should investigate the whole "callee thing"
+        # "can be called recursively": ->
+
+    ##
+    ##  {{ }}
+    ##
+
+    "The {{ print }} statement": do
+
+        "does not output undefined or null values": ->
+            res = _parse "{{ null }}{{ undefined }}"
+            equal res.txt, ''
+
+        "displays the string result of an expression": ->
+            res = _parse "{{ foo }}"
+            equal res.txt, 'foo'
+
+    "The {% macro %} tag": {}
+
+    "The {% extends %} tag": {}
+/*
 parse "{% macro bab (bloub, blab=9) %}{{ bloub }} + BLABBLOUB{% endmacro %}"
 parse """
 {% macro bab (bloub, blab=9) %}
@@ -60,3 +198,13 @@ cou
 
 
 """
+*/
+
+if argv.help
+    console.log optimist.usage()
+    process.exit 0
+
+if argv.verbose
+    suite.run reporter: require \vows/lib/vows/reporters/spec
+else
+    suite.run()

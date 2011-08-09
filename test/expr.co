@@ -1,95 +1,171 @@
 #!/usr/bin/env coco
 { make_expression } = require \../lib/expression
 
-# Some terminal color definition.
-reset = "\x1B[0m"
-grey =    "\x1B[0;30m"
-red =     "\x1B[0;31m"
-green =   "\x1B[0;32m"
-yellow =  "\x1B[0;33m"
-blue =    "\x1B[0;34m"
-magenta = "\x1B[0;35m"
-cyan =    "\x1B[0;36m"
-white =   "\x1B[0;37m"
-bgrey =    "\x1B[1;30m"
-bred =     "\x1B[1;31m"
-bgreen =   "\x1B[1;32m"
-byellow =  "\x1B[1;33m"
-bblue =    "\x1B[1;34m"
-bmagenta = "\x1B[1;35m"
-bcyan =    "\x1B[1;36m"
-bwhite =   "\x1B[1;37m"
+{ fail, ok, equal, notEqual, deepEqual, notDeepEqual, strictEqual, notStrictEqual, throws, doesNotThrow, ifError } = require \assert
 
-p = (str) ->
-    ctx = toto: true, tata: true
+optimist = require \optimist
+    .usage "$0: run the test suite."
+    .alias \verbose, \v
+    .alias \help, \h
+    .describe \verbose, "Show all the tests"
+    .describe \help, "You're staring at it"
+{ argv } = optimist
+
+make = (str) ->
+    ctx = toto: true, tata: true, a: true
     return make_expression str, ctx
 
-failed_count = 0
-total_count = 0
-test = (str, result, message) ->
-    try
-        r = p str
-    catch e
-        r = e.message
-    total_count := total_count + 1
-    if r != result
-        failed_count := failed_count + 1
-        log "  #{bred}!!#{reset} #{str} #{bred}=>#{reset} #{red}#{r}#{reset} (#{yellow}#{result}#{reset})"
-    else
-        log "  #{bgreen}*#{reset} #{str} #{bgreen}=>#{reset} #{green}#{r}#{reset}"
-        
+suite = require \vows ; .describe "Expressions Test Suite"
 
-log = console.log
+suite.addBatch do
+    "Simple operations don't change the operands": do
+        "When adding 2 + 2": -> equal make("2 + 2"), "2 + 2"
 
-test "2 + 2", "2 + 2"
-test "toto", "toto"
-test "prout", "__ctx__.prout"
-test "toto + 2", "toto + 2"
-test "prout + 2", "__ctx__.prout + 2"
-test "toto.prout", "toto.prout"
-test "prout.toto", "__ctx__.prout.toto"
-test "prout.toto (2)", "__ctx__.prout.toto(2)"
-test "toto.prout (2, 3, 4)", "toto.prout(2, 3, 4)"
-test "toto(3) + tata.toto", "toto(3) + tata.toto"
-test "tata.toto(3, toto.tata) + tata.toto", "tata.toto(3, toto.tata) + tata.toto"
-test "variable|filtre", "__filter__[\"filtre\"](__ctx__.variable)"
-test "toto.tata(4)|filtre", "__filter__[\"filtre\"](toto.tata(4))"
-test "variable|filtre(2)", "__filter__[\"filtre\"](__ctx__.variable, 2)"
-test "variable|filtre(2, toto)", "__filter__[\"filtre\"](__ctx__.variable, 2, toto)"
-test "v|f|g", "__filter__[\"g\"](__filter__[\"f\"](__ctx__.v))"
-test "variable|filtre(2 + tata, prout * toto)|another", "__filter__[\"another\"](__filter__[\"filtre\"](__ctx__.variable, 2 + tata, __ctx__.prout * toto))"
-test "variable|filtre(2 + tata|boup, prout * toto)", "__filter__[\"filtre\"](__ctx__.variable, 2 + __filter__[\"boup\"](tata), __ctx__.prout * toto)"
-test "a(b(1))", "__ctx__.a(__ctx__.b(1))"
-test "a(b(1|fi))", "__ctx__.a(__ctx__.b(__filter__[\"fi\"](1)))"
-test "2 + tata|boup", "2 + __filter__[\"boup\"](tata)"
-test "'toto'", "'toto'"
-test "'to\\\'to'", "'to\\\'to'"
-test '"toto"', '"toto"'
-test '"to\\\"to"', '"to\\\"to"'
-test '/regexp/', '/regexp/'
-test '/reg\\/exp/', '/reg\\/exp/'
-test '/regexp/gi', '/regexp/gi'
-test 'toto|filtre(3) == 2', '__filter__["filtre"](toto, 3) == 2'
-test 'toto[tata]', 'toto[tata]'
-test '[1, 2, 3]', '[1, 2, 3]'
-test 'toto[tata] + toto[tati]', 'toto[tata] + toto[__ctx__.tati]'
-test 'toto[tata].bubu[tutu]', 'toto[tata].bubu[__ctx__.tutu]'
-test 'f()|filtre', '__filter__["filtre"](__ctx__.f())'
-test 'toto().a', 'toto().a'
-test 'script.toto', '__ctx__.script.toto'
-test 'step=script.steps[node.step_name]', '__ctx__.step = __ctx__.script.steps[__ctx__.node.step_name]'
-test '"string"', '"string"'
-test 'toto in tata', "__in(toto, tata)"
-test 'toto in tata ? toto : null', "(__in(toto, tata) ? toto : null)"
-test 'toto instanceof tata', "toto instanceof tata"
-test 'toto + tata', "toto + tata"
-test '{ a: 1, b: "toto", "coucou": f|g }', '{ a: 1, b: "toto", "coucou": __filter__["g"](__ctx__.f) }'
-test '  toto == tata  ', 'toto == tata'
+    "Strings and Regexps": do
+        "Single quote": ->
+            equal make("'toto'"), "'toto'"
+        "Single quote with escaping": ->
+            equal make("'to\\\'to'"), "'to\\\'to'"
+        "Double quotes": ->
+            equal make('"toto"'), '"toto"'
+        "Double quotes with escaping": ->
+            equal make('"to\\\"to"'), '"to\\\"to"'
+        "Regexp": ->
+            equal make('/regexp/'), '/regexp/'
+        "Regexp with / escaping": ->
+            equal make('/reg\\/exp/'), '/reg\\/exp/'
+        "Regexp with post qualifiers (gim)": ->
+            equal make('/regexp/gi'), '/regexp/gi'
 
-#failed_count = 0
-#total_count = 0
+    "Out of context variables are prefixed with __ctx__, those inside are not.": do
+        "Simple OOC variable": -> 
+            equal make("prout"), "__ctx__.prout"
+        "Simple IC variable": -> 
+            equal make("toto"), "toto"
+        "When IC is in operations too": -> 
+            equal make("toto + 1"), "toto + 1"
+        "When OOC is in operation": ->
+            equal make("prout + 2"), "__ctx__.prout + 2"
 
-if failed_count > 0
-    log "\n#{bred}/!\#{reset} succeeded #{bred}#{total_count - failed_count}#{reset}#{bgreen} / #{total_count}#{reset} tests"
+    "Function Calls": do
+        "Simple IC function call": ->
+            equal make("toto(1)"), "toto(1)"
+        "OOC function call": ->
+            equal make("popo(1)"), "__ctx__.popo(1)"
+        "Multiple arguments": ->
+            equal make("toto(1,2,3)"), "toto(1, 2, 3)"
+        "Function calling a function": ->
+            equal make("a(b(1))"), "a(__ctx__.b(1))"
+        "Function calling of a function result": ->
+            equal make("a()()"), "a()()"
+
+    "Dot operator tests": do
+        "IC leader is not prefixed, member neither": ->
+            equal make("toto.prout"), "toto.prout"
+        "OOC leader is prefixed, not member": ->
+            equal make("prout.toto"), "__ctx__.prout.toto"
+        "Can do function calls after dotted expression": ->
+            equal make("prout.toto (2)"), "__ctx__.prout.toto(2)"
+        "Function call with multiple argument": ->
+            equal make("toto.prout (2, 3, 4)"), "toto.prout(2, 3, 4)"
+        "Function call added with dotted expression": ->
+            equal make("toto(3) + tata.toto"), "toto(3) + tata.toto"
+        "More complex test mixing functions and dots": ->
+            equal make("tata.toto(3, toto.tata) + tata.toto"), "tata.toto(3, toto.tata) + tata.toto"
+        "Function chaining": ->
+            equal make('toto().a'), 'toto().a'
+        "Function chaining II": ->
+            equal make('toto(tata).a(bubu)'), 'toto(tata).a(__ctx__.bubu)'
+
+    "Filters": do
+        "can be named even with reserved words": ->
+            equal make("va|default"), "__filter__[\"default\"](__ctx__.va)"
+        "An OOC variable through a filter": ->
+            equal make("variable|filtre"), "__filter__[\"filtre\"](__ctx__.variable)"
+        "Dotted variable through a filter": ->
+            equal make("toto.tata(4)|filtre"), "__filter__[\"filtre\"](toto.tata(4))"
+        "Filter taking an argument": ->
+            equal make("variable|filtre(2)"), "__filter__[\"filtre\"](__ctx__.variable, 2)"
+        "Filter with several arguments, one of which an OOC var": ->
+            equal make("variable|filtre(2, toto)"), "__filter__[\"filtre\"](__ctx__.variable, 2, toto)"
+        "Simple filter chaining": ->
+            equal make("v|f|g"), "__filter__[\"g\"](__filter__[\"f\"](__ctx__.v))"
+        "More complex filter chaining + arguments": ->
+            equal make("variable|filtre(2 + tata, prout * toto)|another"), "__filter__[\"another\"](__filter__[\"filtre\"](__ctx__.variable, 2 + tata, __ctx__.prout * toto))"
+        "Another complex filtering expression": ->
+            equal make("variable|filtre(2 + tata|boup, prout * toto)"), "__filter__[\"filtre\"](__ctx__.variable, 2 + __filter__[\"boup\"](tata), __ctx__.prout * toto)"
+        "Arithmetics with a filter": ->
+            equal make("2 + tata|boup"), "2 + __filter__[\"boup\"](tata)"
+        "More complex arithmetics with filters": ->
+            equal make('toto|filtre(3) == 2'), '__filter__["filtre"](toto, 3) == 2'
+        "Filtered function call": ->
+            equal make('f()|filtre'), '__filter__["filtre"](__ctx__.f())'
+
+    "Arrays and indexing": do
+        "Empty Array": ->
+            equal make('[]'), '[]'
+        "Empty Array with spaces": ->
+            equal make(' [  ] '), '[]'
+        "Simple Array": ->
+            equal make('[1, 2, 3]'), '[1, 2, 3]'
+        "Array indexed with variable": ->
+            equal make('toto[tata]'), 'toto[tata]'
+        "Array indexed with IC and OOC used in operation": ->
+            equal make('toto[tata] + toto[tati]'), 'toto[tata] + toto[__ctx__.tati]'
+        "allow us to use . after them": ->
+            equal make('toto[tata].bubu[tutu]'), 'toto[tata].bubu[__ctx__.tutu]'
+        "Allow us to write a[a][a]": ->
+            equal make('a[a][a]'), 'a[a][a]'
+
+    "Assignment": do
+        "Complex Test": ->
+            equal make('step=script.steps[node.step_name]'), '__ctx__.step = __ctx__.script.steps[__ctx__.node.step_name]'
+
+    "The 'in' operator": do
+        "Gets replaced by a function": ->
+            equal make('toto in tata'), "__in(toto, tata)"
+        "Doesn't mess it up with the ternary operator": ->
+            equal make('toto in tata ? toto : null'), "(__in(toto, tata) ? toto : null)"
+
+    "The string operators (in, instanceof, etc..)": do
+        "are not eating up themselves": ->
+            equal make('toto instanceof tata'), "toto instanceof tata"
+        "Can tolerate having ( or ) instead of a space around them": ->
+            equal make('(a)in(b)'), '__in((a), (__ctx__.b))'
+
+    "Object literals": do
+        "Can be empty (without space)": ->
+            equal make('{}'), '{}'
+        "Can be empty (with space)": ->
+            equal make(' {  } '), '{}'
+        "Can be created with regular labels, string labels and complex expressions": ->
+            equal make('{ a: 1, b: "toto", "coucou": f|g }'), '{ a: 1, b: "toto", "coucou": __filter__["g"](__ctx__.f) }'
+
+    "More complex tests involving mixing of previous ones": do
+        "Function calls + filtered expression as argument": ->
+            equal make("a(b(1|fi))"), "a(__ctx__.b(__filter__[\"fi\"](1)))"
+
+    "Expressions": do
+        "Can have space around them": ->
+            equal make('  toto == tata  '), 'toto == tata'
+
+        "can be empty": ->
+            equal make('     '), ''
+
+    "Combination tests": do
+        "Chaining a function call and array call": ->
+            equal make('a()[a]'), 'a()[a]'
+        "Lots of dots, arrays, and function chaining together": ->
+            equal make('a()[a]()().a().at[at]'), 'a()[a]()().a().at[__ctx__.at]'
+        "Filter can't be directly chained with properties": ->
+            throws -> make('a|trim.length')
+                , Error
+
+if argv.help
+    console.log optimist.usage()
+    process.exit 0
+
+if argv.verbose
+    suite.run reporter: require \vows/lib/vows/reporters/spec
 else
-    log "\n#{bgreen}==>#{reset} succeeded #{bgreen}#{total_count - failed_count} / #{total_count}#{reset} tests"
+    suite.run()

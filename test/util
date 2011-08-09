@@ -1,0 +1,13 @@
+#!/usr/bin/env coco
+
+{ registerExtension } = require \../src/helpers 
+registerExtension \.tpl
+
+convert_pwilang = (txt) -> return require(\pwilang).parse txt
+registerExtension \.pwi, convert_pwilang
+registerExtension \.pwx, convert_pwilang
+
+opt = require \optimist
+    .usage ""
+
+s = require(\vows).describe "Parsing Engine Tests"

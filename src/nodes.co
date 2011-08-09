@@ -1,6 +1,7 @@
 
-{ parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression } = require \./expression
+{ parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression, JinJSParseError, JinJSUnimplementedException } = require \./expression
 
+function trim (string) -> return if not string then "" else string.replace(/^\s*|\s*$/, '')
 /**
  *  @param str  a string
  *  @returns    an escaped string suitable to be quoted.
@@ -10,14 +11,6 @@ function escape (str) ->
         .replace /["']/g, (str) -> # Quote escaping
             "\\#{str}"
         .replace /\n/g, '\\n' # New line escaping
-
-class Exception
-    (msg) ->
-        @message = msg
-class JinJSUnimplementedException extends Exception
-    -> super ...
-class JinJSUnexpectedError extends Exception
-    -> super ...
 
 /**
  *
@@ -92,7 +85,7 @@ class NodeList extends Node
 class NodePrint extends Node
     (specs) -> super ...
     compile: function (opts, ctx) ->
-        return "#{@cur opts}_res += (#{make_expression @contents, ctx} || '').toString();"
+        return "#{@cur opts}_res += ((_ref = #{make_expression @contents, ctx}) !== undefined && _ref !== null ? _ref : '').toString();"
 
 class NodeTag extends Node
     @tag = \__tag__
@@ -247,6 +240,9 @@ class NodeElseIf extends NodeTagContainer
         super ...
 
     compile: function (opts, ctx) ->
+        if not trim @contents
+            throw new JinJSParseError "{% elseif <condition> %}: condition can't be empty."
+
         res = "#{@ded opts}} else if (#{make_expression @contents, ctx}) {"
         @ind opts
         res += "#{@child_code opts, ctx}"
@@ -261,6 +257,9 @@ class NodeIf extends NodeTagContainer
         super ...
 
     compile: function (opts, ctx) ->
+        if not trim @contents
+            throw new JinJSParseError "{% if <condition> %}: condition can't be empty."
+
         res = "#{@cur opts}if (#{make_expression @contents, ctx}) {"
         @ind opts
         res += "#{@child_code opts, ctx}#{super.call this, opts, ctx}
@@ -299,52 +298,20 @@ class NodeFor extends NodeTagContainer
     compile: function (opts, ctx) ->
         { key, value, condition } = parse_for @contents, ctx
 
-        if not value # Iterating over an array.
-            return "#{@cur opts}(function () {
-                #{@ind opts}i = 0;
-                #{@cur opts}var _ref = (#{condition}) || [];
-                #{@cur opts}var _prev_loop = __ctx__.loop;
-                #{@cur opts}var _prev_key = __ctx__.#{key};
-                #{@cur opts}var loop = (__ctx__.loop = {length: _ref.length, callee: arguments.callee});
-                #{@cur opts}for (i = 0; i < loop.length; i++) {
-                    #{@ind opts}loop.index = i + 1; loop.index0 = i;
-                    #{@cur opts}loop.first = (i == 0); loop.last = (i == loop.length - 1);
-                    #{@cur opts}__ctx__.#{key} = _ref[i];
+        # We want to include the __for function
+        opts.forblock = true
+
+        value = '' if not value # Iterating over an array.
+
+        return "#{@cur opts}__for(__ctx__, #{condition}, '#{key}', '#{value}', (function () {
                     #{@child_code opts, ctx}
-                #{@ded opts}}
+                }), (function(){
                 #{super.call this, opts, ctx}
-                #{@cur opts}__ctx__.loop = _prev_loop;
-                #{@cur opts}__ctx__.#{key} = _prev_key;
-            #{@ded opts}})();"
-        else # Iterating over an object.
-            res = "#{@cur opts}(function () {
-                #{@ind opts}x = '';
-                #{@cur opts}i = 0;
-                #{@cur opts}var _ref = (#{condition}) || {};
-                #{@cur opts}var _prev_loop = __ctx__.loop;
-                #{@cur opts}var _prev_key = __ctx__.#{key};
-                #{@cur opts}var _prev_value = __ctx__.#{value};
-                #{@cur opts}var loop = (__ctx__.loop = { callee: arguments.callee });
-                #{@cur opts}for (x in _ref) {
-                    #{@ind opts}if (_ref.hasOwnProperty(x)) {
-                        #{@ind opts}loop.index0 = i;
-                        #{@cur opts}loop.index = i + 1;
-                        #{@cur opts}__ctx__.#{key} = x;
-                        #{@cur opts}__ctx__.#{value} = _ref[x];
-                        #{@child_code opts, ctx}
-                        #{@cur opts}i += 1;
-                    #{@ded opts}}
-                #{@ded opts}}
-                #{super.call this, opts, ctx}
-                #{@cur opts}__ctx__.loop = _prev_loop;
-                #{@cur opts}__ctx__.#{key} = _prev_key;
-                #{@cur opts}__ctx__.#{value} = _prev_value;
-            #{@ded opts}})();"
-            return res
+            }) );"
 
 exports <<< { 
     NodeIf, NodeDo, NodeLet, NodeFor, NodeMacro, NodeList, NodeBasic, 
-    NodePrint, NodeComment, NodeExtends, NodeInclude,
+    NodePrint, NodeComment, NodeExtends, NodeInclude, JinJSParseError
     default_nodes: do
         \if : NodeIf
         \do : NodeDo

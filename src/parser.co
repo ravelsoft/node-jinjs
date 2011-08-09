@@ -1,6 +1,6 @@
 sys = require \sys
 { Lexer } = require \./lexer
-{ NodeComment, NodeList, NodePrint, default_nodes } = require \./nodes
+{ NodeComment, NodeList, NodePrint, default_nodes, JinJSParseError } = require \./nodes
 
 tk_tag_open = "{%"
 tk_tag_open_spc = "{%-"
@@ -46,7 +46,7 @@ _tag_search = / *([a-zA-Z][-a-zA-Z0-9_]*) *(.*)/
  */
 function parse_tag (stmt) ->
     m = _tag_search.exec stmt
-    return [m[1], m[2]]
+    return [m.1, m.2 ? ""]
 
 function remove_spaces (str) ->
     i = 0
@@ -158,7 +158,7 @@ class Parser
         while @current_token? and balance > 0
 
         if balance != 0
-            throw new Exception "Unclosed Comment at line #{_lexer.lineno}"
+            throw new JinJSParseError "Unclosed Comment at line #{_lexer.lineno}"
 
         # return new NodeComment contents: comment
         return
@@ -183,7 +183,7 @@ class Parser
         while @current_token? and @current_token != tk_print_close
 
         if @current_token is null
-            throw new Exception "Waiting for '#{tk_print_close}' at line #{@lexer.lineno}"
+            throw new JinJSParseError "Waiting for '#{tk_print_close}' at line #{@lexer.lineno}"
 
         return new NodePrint contents: trim statement
 
@@ -200,7 +200,7 @@ class Parser
             @nextToken()
 
         if @current_token is null
-            throw "Waiting for '#{tk_tag_close}' on line #{@lexer.lineno}"
+            throw new JinJSParseError "Waiting for '#{tk_tag_close}' on line #{@lexer.lineno}"
 
         [name, contents] = parse_tag tag_contents
 
@@ -209,7 +209,7 @@ class Parser
             return
         
         if not @nodes[name]
-            throw "Unexpected tag : '#{name}' at line #{@lexer.lineno}"
+            throw new JinJSParseError "Unexpected tag : '#{name}' at line #{@lexer.lineno}"
 
         stop_clause = {}
 
