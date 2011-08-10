@@ -1,4 +1,3 @@
-"use strict"
 var __filter__ = {{ filter_exp|default("require('jinjs/lib/filters')") }};
 var __utils__ = {{ util_exp|default("require('jinjs/lib/utils')") }};
 var __get_template__ = {{ require_exp|default("require") }};
