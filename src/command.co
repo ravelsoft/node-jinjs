@@ -7,6 +7,7 @@ optimist = require "optimist"
     .alias "help", "h"
     .alias "filter_exp", "f"
     .alias "require_exp", "r"
+    .alias "util_exp", 'u'
     .alias "context", "c"
     .alias "cocontext", "t"
     .describe 'context', "Give a JSON object as context"
@@ -23,8 +24,9 @@ if argv.help
     console.log optimist.help()
     process.exit 0
 
-defaultEnvironment.filter_exp = argv.filter_exp
-defaultEnvironment.require_exp = argv.require_exp
+defaultEnvironment.filter_exp = argv.filter_exp ? "require('jinjs/lib/filters')"
+defaultEnvironment.require_exp = argv.require_exp ? "require"
+defaultEnvironment.util_exp = argv.util_exp ? "require('jinjs/lib/utils')"
 
 function compile (string) ->
     return defaultEnvironment.getTemplateSourceFromString string

@@ -7,7 +7,6 @@ class JinJSParseError extends Error
 function make_expression (input, compilation_ctx, startRule) ->
     grammar = __grammar__
     grammar.compilation_ctx = compilation_ctx
-    # console.log input
     try
         return grammar.parse input, startRule
     catch e
@@ -20,7 +19,7 @@ make_parse_rule = (rule_name) ->
 parse_for = make_parse_rule \tag_for
 parse_let = make_parse_rule \tag_let
 parse_macro = make_parse_rule \tag_macro
-parse_extends = make_parse_rule \string
+parse_extends = make_expression
 parse_block = make_parse_rule \tag_block
 
 exports <<< { make_expression, parse_for, parse_let, parse_macro, parse_extends, parse_block }

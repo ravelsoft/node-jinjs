@@ -58,6 +58,8 @@ suite.addBatch do
             equal make("a(b(1))"), "a(__ctx__.b(1))"
         "Function calling of a function result": ->
             equal make("a()()"), "a()()"
+        "Super is callable and is prefixed by an underscore": ->
+            equal make("super()"), "__ctx__._super()"
 
     "Dot operator tests": do
         "IC leader is not prefixed, member neither": ->
