@@ -1,10 +1,6 @@
 var __filter__ = {{ filter_exp|default("require('jinjs/lib/filters')") }};
 var __utils__ = {{ util_exp|default("require('jinjs/lib/utils')") }};
-var __get_template__ = function(tpl) {
-    if (tpl instanceof String) { return {{ require_exp|default("require") }}(tpl); }
-    if (tpl === null || tpl === undefined) throw new Error("Cannot extend null or undefined");
-    return tpl; // We assume that tpl is a template instance if it is not a string.
-}
+var __get_template__ = {{ require_exp|default("require") }};
 var fname = null, filter = null;
 var __last_ctx__ = null;
 

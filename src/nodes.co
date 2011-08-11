@@ -1,5 +1,5 @@
 
-{ parse_import, parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression, JinJSParseError, JinJSUnimplementedException } = require \./expression
+{ parse_import, parse_string, parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression, JinJSParseError, JinJSUnimplementedException } = require \./expression
 
 function trim (string) -> return if not string then "" else string.replace(/^\s*|\s*$/, '')
 /**
@@ -11,6 +11,13 @@ function escape (str) ->
         .replace /["']/g, (str) -> # Quote escaping
             "\\#{str}"
         .replace /\n/g, '\\n' # New line escaping
+
+function template_expr_is_string (expr) ->
+    try
+        parse_string expr
+        return true
+    catch e
+        return false
 
 /**
  *
@@ -107,7 +114,11 @@ class NodeExtends extends NodeTag
     compile: function (opts, ctx) ->
         opts.'extends' = true
         tpl_name = parse_extends @contents, opts
-        return "#{@cur opts}__extends__ = __get_template__ (#{tpl_name});"
+        if template_expr_is_string tpl_name
+            return "#{@cur opts}__extends__ = __get_template__ (#{tpl_name});"
+        else
+            return "#{@cur opts}__extends__ = #{tpl_name}; 
+                #{@cur opts}if (__extends__ === null || __extends__ === undefined) throw new Error ('Cant extend a null template.');"
 
 /**
  *
@@ -118,7 +129,14 @@ class NodeInclude extends NodeTag
     (specs) -> super ...
 
     compile: function (opts, ctx) ->
-        return "#{@cur opts}_res += __get_template__ (#{make_expression @contents, ctx}).render(__ctx__);"
+        tpl_name = parse_extends @contents, opts
+
+        if template_expr_is_string tpl_name
+            tpl_exp = "__get_template__(#{tpl_name})"
+        else
+            tpl_exp = tpl_name
+
+        return "#{@cur opts}_res += (#{tpl_exp}).render(__ctx__);"
 
 class NodeImport extends NodeTag
     @tag = \import
@@ -129,15 +147,20 @@ class NodeImport extends NodeTag
 
         opts.\clone = true # We're going to need the clone function
 
+        if template_expr_is_string template
+            tpl_exp = "__get_template__(#{template})"
+        else
+            tpl_exp = template
+
         result = "#{@cur opts}(function(){ "
 
         if with_context
             result += "#{@ind opts}var __new_ctx = __import({}, __ctx__);
                 // __new_ctx now gets populated with the new exported variables.
-                #{@cur opts}__get_template__(#{template}).render(__new_ctx);
+                #{@cur opts}(#{tpl_exp}).render(__new_ctx);
             "
         else
-            result += "#{@cur opts}var __new_ctx = __get_template__(#{template})._cached_ctx();"
+            result += "#{@cur opts}var __new_ctx = (#{tpl_exp})._cached_ctx();"
 
         if as_name # Importing the whole module.
             result += "#{@cur opts}__ctx__.#{as_name} = __new_ctx;
