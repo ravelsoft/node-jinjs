@@ -219,7 +219,27 @@ suite.addBatch do
             res = _parse "{% include included %}{{ foo }}", foo: "foo", included: included
             equal res.txt, 'bar'
 
-            
+    "The {% import %} tag": do
+
+        "allows us to import variables from another template to another": ->
+            imported = compile "{% let foo = 'bar' %}"
+            res = _parse "{% from imported import foo %}{{ foo }}", imported: imported
+            equal res.txt, 'bar'
+
+        "allows us to import a whole template as a module": ->
+            imported = compile "{% let foo = 'bar' %}"
+            res = _parse "{% import imported as imp %}{{ imp.foo }}", imported: imported
+            equal res.txt, 'bar'
+
+        "by default does not expose the current context to the imported module": ->
+            imported = compile "{% let foo = 'bar' %}"
+            res = _parse "{% import imported as toto %}{{ foo }}", imported: imported, foo: 'foo'
+            equal res.txt, 'foo'
+
+        "can pass the context to the imported template": ->
+            imported = compile "{% let foo = bar + 'foo' %}"
+            res = _parse "{% import imported as toto with context %}{{ toto.foo }}", imported: imported, bar: 'bar'
+            equal res.txt, 'barfoo'
 /*
 parse "{% macro bab (bloub, blab=9) %}{{ bloub }} + BLABBLOUB{% endmacro %}"
 parse """

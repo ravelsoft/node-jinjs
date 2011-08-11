@@ -6,6 +6,7 @@ var __get_template__ = function(tpl) {
     return tpl; // We assume that tpl is a template instance if it is not a string.
 }
 var fname = null, filter = null;
+var __last_ctx__ = null;
 
 for (fname in __utils__) {
     eval("var " + fname + " = __utils__." + fname + ";");
@@ -47,3 +48,12 @@ function render (__ctx__) {
     return _res;
 }
 exports.render = render;
+
+function _cached_ctx () {
+    if (!__last_ctx__) {
+        __last_ctx__ = {};
+        render(__last_ctx__);
+    }
+    return __last_ctx__;
+}
+exports._cached_ctx = _cached_ctx;

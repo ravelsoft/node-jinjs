@@ -328,4 +328,14 @@ tag_block
     = space? first_letter:[a-zA-Z_] next_letters:[-a-zA-Z0-9_]* space? -> 
         return "#{first_letter}#{if next_letters then next_letters.join "" else ''}" 
 
+tag_import
+    = exp:expression space? "import" space? args:variable_list ctx:(space "with" space "context")? -> return template: exp, variables: args, with_context: ctx !== ""
+    / exp:expression space? "as" space? id: identifier ctx:(space "with" space "context")? -> return template: exp, as_name: id, with_context: ctx !== ""
+
+variable_list
+    = id:identifier COMMA list:variable_list -> 
+        list.push id
+        return list
+    / id:identifier -> return [id]
+
 ## END

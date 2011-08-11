@@ -1,5 +1,5 @@
 
-{ parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression, JinJSParseError, JinJSUnimplementedException } = require \./expression
+{ parse_import, parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression, JinJSParseError, JinJSUnimplementedException } = require \./expression
 
 function trim (string) -> return if not string then "" else string.replace(/^\s*|\s*$/, '')
 /**
@@ -119,6 +119,44 @@ class NodeInclude extends NodeTag
 
     compile: function (opts, ctx) ->
         return "#{@cur opts}_res += __get_template__ (#{make_expression @contents, ctx}).render(__ctx__);"
+
+class NodeImport extends NodeTag
+    @tag = \import
+    (specs) -> super ...
+
+    compile: (opts, ctx) ->
+        { template, as_name, variables, with_context } = parse_import @contents, ctx
+
+        opts.\clone = true # We're going to need the clone function
+
+        result = "#{@cur opts}(function(){ "
+
+        if with_context
+            result += "#{@ind opts}var __new_ctx = __import({}, __ctx__);
+                // __new_ctx now gets populated with the new exported variables.
+                #{@cur opts}__get_template__(#{template}).render(__new_ctx);
+            "
+        else
+            result += "#{@cur opts}var __new_ctx = __get_template__(#{template})._cached_ctx();"
+
+        if as_name # Importing the whole module.
+            result += "#{@cur opts}__ctx__.#{as_name} = __new_ctx;
+            "
+
+        else # List of imported elements from the context.
+            result += "#{@cur opts}var names = ['#{variables.join "', '"}'];
+                #{@cur opts}for (var i = 0; i < names.length; i++) {
+                    #{@ind opts}__ctx__[names[i]] = __new_ctx[names[i]];
+                #{@ded opts}}
+            "
+
+            
+        result += "#{@ded opts}})();"
+        return result
+
+class NodeFromImport extends NodeImport
+    @tag = \from
+    (specs) -> super ...
 
 /**
  *
@@ -311,7 +349,7 @@ class NodeFor extends NodeTagContainer
 
 exports <<< { 
     NodeIf, NodeDo, NodeLet, NodeFor, NodeMacro, NodeList, NodeBasic, 
-    NodePrint, NodeComment, NodeExtends, NodeInclude, JinJSParseError
+    NodePrint, NodeComment, NodeExtends, NodeInclude, JinJSParseError, NodeImport, NodeFromImport
     default_nodes: do
         \if : NodeIf
         \do : NodeDo
@@ -321,5 +359,7 @@ exports <<< {
         \extends : NodeExtends
         \block : NodeBlock
         \include : NodeInclude
+        \from : NodeFromImport
+        \import : NodeImport
     }
 
