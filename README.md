@@ -6,9 +6,9 @@ JinJS is the native port of Jinja to the world of NodeJS. Just like Jinja, it ai
 It is not a 100% exact copy of Jinja however, and is still in early stages.
 
 So far, the principal differences are :
- * You can't have variables with javascript reserved names
- * There is no real `loader` : instead, templates are `require`'d as if they were modules. It was in fact made so that integrating with *browserify* is crazy easy : juste require your template and have browserify bundle it for you.
- * It is probably much more permissive ; you can assign to compound expressions (`{% let foo.bar = something %}` is valid)
+*   You can't have variables with javascript reserved names
+*   There is no real `loader` : instead, templates are `require`'d as if they were modules. It was in fact made so that integrating with *browserify* is crazy easy : juste require your template and have browserify bundle it for you.
+*   It is probably much more permissive ; you can assign to compound expressions (`{% let foo.bar = something %}` is valid)
 
 Head to http://jinja.pocoo.org/ to read the template designer documentation (the API is fairly different).
 
