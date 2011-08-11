@@ -20,36 +20,30 @@ The following filters are implemented : `in`, `abs`, `capitalize`, `default`, `f
 How To Use
 ==========
 
+    npm install jinjs
+
 To have node load your templates as if they were modules, you first have to register your module extension :
 
-```
-require("jinjs").registerExtension(".tpl");
-```
+    require("jinjs").registerExtension(".tpl");
 
 If you want your file to be transformed prior to being submitted to jinjs, you can pass a callback ;
 
-```
-var pwilang = require("pwilang");
-require("jinjs").registerExtension(".pwx", function (txt) { 
-    return pwilang.parse(txt); 
-});
-```
+    var pwilang = require("pwilang");
+    require("jinjs").registerExtension(".pwx", function (txt) { 
+        return pwilang.parse(txt); 
+    });
 
 You can now write :
 
-```
-var my_template = require("./mytemplate");
-var context = { foo: "foo", bar: "bar" };
-var result = my_template.render(context);
-```
+    var my_template = require("./mytemplate");
+    var context = { foo: "foo", bar: "bar" };
+    var result = my_template.render(context);
 
 Use With Browserify
 ===================
 
-```
-var de = require("jinjs").defaultEnvironment;
-var browserifier = require("browserify")();
-browserifier.register({ extension: ".tpl", wrapper: function (body, file) {
-    return de.getTemplateSourceFromString(body);
-});
-```
+    var de = require("jinjs").defaultEnvironment;
+    var browserifier = require("browserify")();
+    browserifier.register({ extension: ".tpl", wrapper: function (body, file) {
+        return de.getTemplateSourceFromString(body);
+    });
