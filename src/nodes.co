@@ -1,5 +1,5 @@
 
-{ parse_import, parse_string, parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression, JinJSParseError, JinJSUnimplementedException } = require \./expression
+{ parse_import, parse_string, parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression } = require \./expression
 
 function trim (string) -> return if not string then "" else string.replace(/^\s*|\s*$/, '')
 /**
@@ -26,7 +26,7 @@ class Node
     (specs) ->
         @contents = specs.contents if specs?.contents
     compile: ->
-        throw new JinJSUnimplementedException
+        throw new Error "This function should never be called."
     ind: (opts) ->
         opts.__indent__ ?= 0
         opts.__indent__ = opts.__indent__ + 1
@@ -336,7 +336,7 @@ class NodeElseIf extends NodeTagContainer
 
     compile: function (opts, ctx) ->
         if not trim @contents
-            throw new JinJSParseError "{% elseif <condition> %}: condition can't be empty."
+            throw new Error "{% elseif <condition> %}: condition can't be empty."
 
         res = "#{@ded opts}} else if (#{make_expression @contents, ctx}) {"
         @ind opts
@@ -353,7 +353,7 @@ class NodeIf extends NodeTagContainer
 
     compile: function (opts, ctx) ->
         if not trim @contents
-            throw new JinJSParseError "{% if <condition> %}: condition can't be empty."
+            throw new Error "{% if <condition> %}: condition can't be empty."
 
         res = "#{@cur opts}if (#{make_expression @contents, ctx}) {"
         @ind opts
@@ -406,7 +406,7 @@ class NodeFor extends NodeTagContainer
 
 exports <<< { 
     NodeIf, NodeDo, NodeLet, NodeFor, NodeMacro, NodeList, NodeBasic, 
-    NodePrint, NodeComment, NodeExtends, NodeInclude, JinJSParseError, NodeImport, NodeFromImport
+    NodePrint, NodeComment, NodeExtends, NodeInclude, NodeImport, NodeFromImport
     default_nodes: do
         \if : NodeIf
         \do : NodeDo
