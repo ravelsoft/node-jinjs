@@ -120,6 +120,40 @@ class NodeExtends extends NodeTag
             return "#{@cur opts}__extends__ = #{tpl_name}; 
                 #{@cur opts}if (__extends__ === null || __extends__ === undefined) throw new Error ('Cant extend a null template.');"
 
+class NodeImport extends NodeTag
+    @tag = \import
+    (specs) -> super ...
+
+    compile: (opts, ctx) ->
+        { tpl, as, imports, with_context } = parse_import
+
+        opts.\clone = true # We're going to need the clone function
+
+        result = "#{@cur opts}(function(){ 
+                #{@ind opts}var __new_ctx = #{if not with_context then '{}' else '__import({}, __ctx__)'};
+                // __new_ctx now gets populated with the new exported variables.
+                #{@cur opts}__get_template__(#{tpl}).render(__new_ctx);
+            "
+
+        if as # Importing the whole module.
+            result += "#{common}#{@cur opts}__ctx__.#{as} = __new_ctx;
+            "
+
+        else # List of imported elements from the context.
+            result += "#{@cur opts}var names = ['#{imports.join "', '"}'];
+                #{@cur opts}for (var i = 0; i < names.length; i++) {
+                    #{@ind opts}__ctx__[names[i]] = __new_ctx[names[i]];
+                #{@ded opts}}
+            "
+
+            
+        result += "#{@ded opts}})();"
+        return result
+
+class NodeFromImport extends NodeImport
+    @tag = \from
+    (specs) -> super ...
+
 /**
  *
  */
