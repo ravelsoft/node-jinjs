@@ -308,7 +308,7 @@ class NodeBlock extends NodeTagContainer
                 #{@ind opts}_b['#{block_name}'] = function (__ctx__) { return original.call({ _super: __block_#{block_name}}, __ctx__); };
             #{@ded opts}})(_b['#{block_name}']);
         #{@ded opts}} else { _b['#{block_name}'] = __block_#{block_name}; }
-        #{@cur opts}if (__extends__ === null) _res += _b['#{block_name}'](__ctx__);"
+        #{@cur opts}_res += _b['#{block_name}'](__ctx__);"
 
 
 

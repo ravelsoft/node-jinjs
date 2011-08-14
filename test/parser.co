@@ -183,25 +183,10 @@ suite.addBatch do
             res = _parse "{% extends base %}should not see me", (base: base)
             equal res.txt, 'base'
 
-        "understand that the {% block %} tag can be redefined in child templates": ->
-            base = compile ":{% block b %}should not see me{% endblock %}:"
-            res = _parse "{% extends base %}should not see me{% block b %}hello{% endblock %}", base: base
-            equal res.txt, ':hello:'
-
-        "allows us to have blocks redefined in various child templates": ->
-            base = compile ":{% block b %}should not see me{% endblock %}:"
-            base2 = compile "{% extends base %}={% block b %}should still not see me{% endblock %}="
-            res = _parse "{% extends base2 %}should not see me{% block b %}hello{% endblock %}", base: base, base2: base2
-            equal res.txt, ':hello:'
-
         "does not let us extend null or undefined variables": ->
             throws -> _parse "{% extends null %}"
             throws -> _parse "{% extends bloub %}"
 
-        "defines a super() function for previous blocks": ->
-            base = compile "{% block b %}hello{% endblock %}"
-            res = _parse "{% extends base %}{% block b %}{{ super() }} world{% endblock %}" base: base
-            equal res.txt, 'hello world'
 
     "The {% include %} tag": do
         "allows us to include the contents of a template into another": ->
@@ -218,6 +203,35 @@ suite.addBatch do
             included = compile "{% let foo = 'bar' %}"
             res = _parse "{% include included %}{{ foo }}", foo: "foo", included: included
             equal res.txt, 'bar'
+
+    "The {% block %} tag": do
+
+        "can be nested": ->
+            extended = compile "{% block orig %}original{% block nested %} nested{% endblock %}{% endblock %}"
+            res = _parse "{% extends ext %}", ext: extended
+            equal res.txt, "original nested" 
+
+        "can have redefined nested blocks": ->
+            extended = compile "{% block orig %}hello {% block nested %}bold{% endblock %}{% endblock %}"
+            res = _parse "{% extends ext %}{% block nested %}world{% endblock %}", ext: extended
+            equal res.txt, "hello world" 
+
+        "defines a super() function for previous blocks": ->
+            base = compile "{% block b %}hello{% endblock %}"
+            res = _parse "{% extends base %}{% block b %}{{ super() }} world{% endblock %}" base: base
+            equal res.txt, 'hello world'
+
+        "can be redefined in child templates": ->
+            base = compile ":{% block b %}should not see me{% endblock %}:"
+            res = _parse "{% extends base %}should not see me{% block b %}hello{% endblock %}", base: base
+            equal res.txt, ':hello:'
+
+        "allows us to have blocks redefined in various child templates": ->
+            base = compile ":{% block b %}should not see me{% endblock %}:"
+            base2 = compile "{% extends base %}={% block b %}should still not see me{% endblock %}="
+            res = _parse "{% extends base2 %}should not see me{% block b %}hello{% endblock %}", base: base, base2: base2
+            equal res.txt, ':hello:'
+
 
     "The {% import %} tag": do
 

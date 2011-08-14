@@ -18,8 +18,11 @@ for (filter in __filter__) {
 {% for name, contents in blocks %}
 // Block declaration of "{{ name }}"
 function __block_{{ name }} (__ctx__) {
-    var _super = this._super;
+    var _super = this._super || function(){return "";};
+    var _b = (__ctx__ ? __ctx__.__blocks__ : {});
+    var _res = "";
     {{ contents }}
+    return _res;
 }
 {% endfor %}
 
