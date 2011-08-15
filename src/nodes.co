@@ -11,6 +11,8 @@ function escape (str) ->
         .replace /["']/g, (str) -> # Quote escaping
             "\\#{str}"
         .replace /\n/g, '\\n' # New line escaping
+        .replace /\r/g, '\\r' # Carriage return
+        .replace /\t/g, '\\t' # Carriage return
 
 function template_expr_is_string (expr) ->
     try

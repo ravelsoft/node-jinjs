@@ -176,7 +176,7 @@ regexp_terminal
 
 
 space
-    = [\t\n ]+ -> return " " 
+    = [\t\n\r ]+ -> return " " 
 COMMA
     = space? "," space? -> return "," 
 COLON
