@@ -13,11 +13,16 @@ class Environment
         @util_exp = specs.util_exp
         @parser = specs.parser ? new Parser()
 
-    getTemplate: (str) ->
-
-    getTemplateSource: (str) ->
-
     getTemplateFromString: (str) ->
+        try
+            exports = {} # Necessary to get the render() function
+            compiled = @getTemplateSourceFromString str
+            eval compiled
+            return exports
+        catch e
+            if e instanceof SyntaxError
+                console.log compiled
+            throw e
 
     getTemplateSourceFromString: (str) ->
         ast = @parser.parse str
