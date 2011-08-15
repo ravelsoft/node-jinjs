@@ -1,5 +1,7 @@
 
 ->
+    compilation_ctx = arguments[2] ? {}
+
     make_filter = (expression, filters) ->
         res = expression
         for f of filters

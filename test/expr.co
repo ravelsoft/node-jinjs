@@ -1,5 +1,5 @@
 #!/usr/bin/env coco
-{ make_expression } = require \../lib/expression
+{ parse:make_expression } = require \../lib/expression
 
 { fail, ok, equal, notEqual, deepEqual, notDeepEqual, strictEqual, notStrictEqual, throws, doesNotThrow, ifError } = require \assert
 

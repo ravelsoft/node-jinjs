@@ -1,5 +1,16 @@
 
-{ parse_import, parse_string, parse_block, parse_extends, parse_macro, parse_for, parse_let, make_expression } = require \./expression
+{ parse:make_expression } = require \./expression
+
+make_parse_rule = (rule_name) ->
+    return (contents, ctx) -> make_expression contents, rule_name, ctx
+
+parse_for = make_parse_rule \tag_for
+parse_let = make_parse_rule \tag_let
+parse_macro = make_parse_rule \tag_macro
+parse_extends = make_expression
+parse_block = make_parse_rule \tag_block
+parse_import = make_parse_rule \tag_import
+parse_string = make_parse_rule \string
 
 function trim (string) -> return if not string then "" else string.replace(/^\s*|\s*$/, '')
 /**
