@@ -215,6 +215,12 @@ class NodeFromImport extends NodeImport
     @tag = \from
     (specs) -> super ...
 
+class NodeAbspath extends NodeTag
+    @tag = \abspath
+    (specs) -> super ...
+    compile: function (opts, ctx) ->
+        path = parse_string @contents, ctx
+        return "#{@cur opts}_res += require('path').join(__dirname, #{path});"
 /**
  *
  */
@@ -418,5 +424,6 @@ exports <<< {
         \include : NodeInclude
         \from : NodeFromImport
         \import : NodeImport
+        \abspath : NodeAbspath
     }
 

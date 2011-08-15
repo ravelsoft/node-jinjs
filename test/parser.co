@@ -254,6 +254,13 @@ suite.addBatch do
             imported = compile "{% let foo = bar + 'foo' %}"
             res = _parse "{% import imported as toto with context %}{{ toto.foo }}", imported: imported, bar: 'bar'
             equal res.txt, 'barfoo'
+
+    "The {% abspath %} tag": do
+
+        "Outputs the absolute path of the given string": ->
+            res = _parse "{% abspath 'toto' %}"
+            equal res.txt, (require \path ; .join __dirname, \toto)
+            
 /*
 parse "{% macro bab (bloub, blab=9) %}{{ bloub }} + BLABBLOUB{% endmacro %}"
 parse """
