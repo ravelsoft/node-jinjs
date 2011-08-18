@@ -1,0 +1,6 @@
+{% extends "extended.jinjs" %}
+
+%- block hello
+	Hello
+%- block world
+	World

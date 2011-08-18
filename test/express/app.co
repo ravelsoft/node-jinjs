@@ -1,0 +1,107 @@
+#!/usr/bin/env coco
+
+{ createServer } = require \express
+{ parse: parse_pwilang } = require \pwilang
+
+app = createServer()
+
+app.set "view options", layout: false, jinjs_pre_compile: (str) ->
+    return parse_pwilang str, jinja: true
+
+# Testing without layout.
+app.get \/, (req, res) ->
+    res.render \index.jinjs, testvar: "Hello World"
+
+app.get \/test-layout, (req, res) ->
+    res.render \index.jinjs, layout: true, testvar: "World"
+
+app.get \/without-pwilang, (req, res) ->
+    res.render \test-without-pwilang.jinjs, jinjs_pre_compile: null, testvar: "Hello World"
+
+app.get \/test-include, (req, res) ->
+    res.render \with-include.jinjs
+
+app.get \/test-extend, (req, res) ->
+    res.render \test-extend.jinjs
+
+app.get \/test-partial, (req, res) ->
+    res.render \test-partial.jinjs, numbers: [1, 2, 3, 4]
+
+<- app.listen 4000
+{ fail, ok, equal, notEqual, deepEqual, notDeepEqual, strictEqual, notStrictEqual, throws, doesNotThrow, ifError } = require \assert
+{ request } = require \http
+
+_equal = equal
+equal = (var1, var2) ->
+    filter = (s) -> return '"' + (s.replace /\n/g, "\\n" ; .replace /\t/g, "\\t") + '"'
+    _equal filter(var1), filter(var2)
+
+get = function (path, cbk) ->
+    req = request (host: \localhost, port: 4000, path: path, method: \GET), (res) ->
+        # equal 200, res.statusCode
+        res.setEncoding \utf-8
+
+        result = ""
+
+        res.on \data, (data) ->
+            result += data
+
+        res.on \end, -> 
+            cbk null, result
+
+    req.end()
+    return
+
+testreq = function (path, cbk) ->
+    return do
+        topic: ->
+            get path, @callback
+            return
+        test: (err, res) -> 
+            cbk res
+        
+
+optimist = require \optimist
+    .usage "$0: run the test suite."
+    .alias \verbose, \v
+    .alias \persist, \p
+    .alias \help, \h
+    .describe \verbose, "Show all the tests"
+    .describe \persist, "Do not shutdown the server after the tests were ran"
+    .describe \help, "You're staring at it"
+{ argv } = optimist
+
+suite = require \vows ; .describe "Express Test Suite"
+
+suite.addBatch do
+    "The express server": do
+        "can load a jinja template": testreq \/, (res) ->
+            equal res, 'Hello World.'
+
+    "The jinja templates in Express": do
+        "are usable with the layout system": testreq \/test-layout, (res) ->
+            equal res, 'Hello World.'
+
+        "are usable with the partials system": testreq \/test-partial, (res) ->
+            equal res, 'Numbers : 1, 2, 3, 4, .'
+        
+        "can specify (or deactivate) a pre-rendering function": testreq \/without-pwilang, (res) ->
+            equal res, 'Hello World.'
+
+        "can use its own include facility": testreq \/test-include, (res) ->
+            equal res, 'Hello World.'
+
+        "can use its own extend/block facility": testreq \/test-extend, (res) ->
+            equal res, 'Hello World'
+
+
+if argv.help
+    console.log optimist.usage()
+    process.exit 0
+
+if argv.verbose
+    suite.run (reporter: require \vows/lib/vows/reporters/spec), (results) ->
+        process.exit() if not argv.persist
+else
+    suite.run {}, (results) ->
+        process.exit() if not argv.persist

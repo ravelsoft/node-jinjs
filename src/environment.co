@@ -1,6 +1,11 @@
 { Parser } = require \./parser
 { render: render_template } = require \./module_template
+{ watchFile, readFileSync } = require \fs
+{ join, dirname } = require \path
 
+/**
+ *  A very basic environment.
+ */
 class Environment
     $evalTemplateObject = (t, env) ->
         environment = env
@@ -12,6 +17,7 @@ class Environment
         @require_exp = specs.require_exp
         @util_exp = specs.util_exp
         @parser = specs.parser ? new Parser()
+        @pre_compile_func = specs.pre_compile_func
 
     getTemplateFromString: (str) ->
         try
@@ -25,6 +31,8 @@ class Environment
             throw e
 
     getTemplateSourceFromString: (str) ->
+        str = @pre_compile_func str if @pre_compile_func
+
         ast = @parser.parse str
         opts = __indent__: 1
 
@@ -32,10 +40,104 @@ class Environment
         opts <<< { body, @filter_exp, @require_exp, @util_exp }
         return render_template opts
 
+/**
+ *  A basic file compilation environment. It has no notion of template
+ *  directories to look in ; it expects getTemplate() to be provided with
+ *  an absolute path to its template.
+ *
+ *  Inside templates, templates can be called by relative paths however.
+ *
+ *  If a file doesn't exist, this environment will just crash and burn, as
+ *  it makes no checks whatsoever.
+ */
+class BasicFileEnvironment extends Environment
+    /**
+     *  Constructor.
+     */
+    (specs) -> 
+        specs <<< require_exp: "__load_template"
+        super ...
+
+        @cache = {}
+        @tracked = {}
+        @deps = {}
+
+    /**
+     *  Invalidate the files that depend on the template at path.
+     *  @param path: The base template.
+     */
+    invalidateDeps: (path) ->
+        for file, deps in @deps
+            if path in deps # path is a dependency of file
+                # Therefore, we invalidate file.
+                delete @cache[file]
+                # Maybe file is itself a dependancy of another.
+                @invalidateDeps file
+
+        delete @deps[path] # They shall be re-computed at next compile.
+        
+
+    /**
+     *  @param path: The path to monitor for changes.
+     */
+    trackFile: (path) ->
+        # Cache invalidation for dev environments
+        if not (path in @tracked)
+            @tracked[path] = true
+            watchFile path, (curr, prev) ~>
+                if curr.mtime > prev.mtime
+                    delete @cache[path]
+
+                @invalidateDeps path
+
+    /**
+     *  @param  path: An absolute path.
+     *  @throws Error if the path does not exist.
+     */
+    getTemplate: (path) ->
+        return @cache[path] if path in @cache
+
+        result = readFileSync path, \utf-8
+        result = @getTemplateFromString result, filename: path, root: dirname(path)
+        @cache[path] = result
+        return result
+
+    /**
+     *  @param str: The text contents of the template.
+     *  @param opts: An object containing at least "filename" as the path
+     *      to the template, and "root" as its basedir.
+     */
+    getTemplateFromString: (str, opts) ->
+        __filename = opts.filename
+        __dirname = opts.root
+
+        # set up file monitoring to invalidate cache if it changes on disk.
+        @trackFile __filename
+        @deps[__filename] = {}
+
+        __load_template = (path) ~> 
+            if path.0 != \/ # path is a local path.
+                path = join(__dirname, path)
+
+            # path is now a dependency of the current file.
+            @deps[__filename][path] = true
+
+            return @getTemplate path
+
+        try
+            exports = {} # Necessary to get the render() function
+            compiled = @getTemplateSourceFromString str
+            eval compiled
+            return exports
+        catch e
+            if e instanceof SyntaxError
+                console.log compiled
+            throw e
 
 exports import {
     defaultEnvironment: new Environment()
     fileOutputEnvironment: new Environment filters: "require('jinjs/lib/filters')", loader: "require"
     Environment
+    BasicFileEnvironment
     }
 

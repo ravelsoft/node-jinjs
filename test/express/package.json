@@ -1,0 +1,23 @@
+{
+    "name" : "express-test",
+    "description" : "",
+    "keywords" : [],
+    "author" : "Christophe Eymard <christophe.eymard@ravelsoft.com> (http://www.ravelsoft.com)",
+    "version" : "0.0.1",
+    "homepage" : "",
+    "repository" : {},
+    "licenses" : [ {   
+            "type" : "MIT",
+            "url"  : "https://github.com/satyr/coco/raw/master/LICENSE"
+        }
+    ],
+    "engines"     : {"node": ">=0.4.0"},
+    "directories" : {"lib" : "./lib"  },
+    "main" : "./lib/main",
+    "bin" : {},
+     "dependencies" : { 
+        "express": "latest",
+        "pwilang": "latest"
+     },
+     "devDependencies" : {}
+}

@@ -1,0 +1,63 @@
+{ BasicFileEnvironment } = require \./environment
+
+/**
+ *  A compilation environment designed to be used with Express.
+ */
+class ExpressEnvironment extends BasicFileEnvironment
+    /**
+     *  Constructor.
+     */
+    (specs) -> 
+        super ...
+        @track_changes = specs.track_changes
+
+    /**
+     *  @param path: The path to monitor for changes.
+     */
+    trackFile: (path) ->
+        if @track_changes
+            return super.call this, path
+
+    getTemplateFromString: (str, ctx) ->
+        # Return the cache at this stage since express only sends us the text
+        # to compile.
+        return @cache[ctx.filename] if ctx.filename in @cache
+
+        # Other wise, just compile the template.
+        res = super.call this, str, ctx
+
+        # And set its cache here too, even if it is redundant with getTemplate()
+        @cache[ctx.filename] = res
+        return res
+
+/**
+ *  Compile function used to integrate with Express.
+ *
+ *  @param str: The body of the template.
+ *  @param options: Options passed to the parser by Express.
+ *      The "jinjs_pre_compile" can contain a function that takes a (string)
+ *         argument which transforms the source before passing it to jinjs.
+ *      The "jinjs_track_changes" will force the Environment to cache the templates,
+ *         even if the app is not in development mode. It will only work if Express
+ *         has deactivated its own cache.
+ *
+ *  @return A function taking a context as parameter.
+ */
+function compile (str, options) ->
+    # If we want something to pre-parse our template before.
+    if options.jinjs_pre_compile
+        str = options.jinjs_pre_compile str
+
+    # Create a JinJS environment if it doesn't exist already.
+    # It is set so that it will still cache files in dev environment, but will clear them when
+    # it detects they changed (with some watchFile magic)
+    options.app.settings.jinjsenv ?= new ExpressEnvironment do 
+        track_changes: options.app.settings.env == \development or options.app.settings."view options".jinjs_track_changes
+        pre_compile_func: options.jinjs_pre_compile
+
+    # Create the template.
+    exports = options.app.settings.jinjsenv.getTemplateFromString str, options
+    return exports.render
+
+exports <<< { compile }
+
