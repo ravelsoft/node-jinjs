@@ -276,9 +276,9 @@ class NodeMacro extends NodeTagContainer
 
     init_defaults: (opts, args) ->
         res = ""
-        for a in args
+        for a of args
             if a.default_value
-                res += "#{@cur opts}#{a} = (#{a} === undefined) ? (#{a.default_value}) : #{a};"
+                res += "#{@cur opts}#{a.name} = (#{a.name} === undefined) ? (#{a.default_value}) : #{a.name};"
 
     compile: (opts, ctx) ->
         { args, function_name } = parse_macro @contents, ctx
@@ -287,9 +287,9 @@ class NodeMacro extends NodeTagContainer
         new_ctx = {} <<< ctx
 
         for argname of args
-            new_ctx[argname] = true
+            new_ctx[argname.name] = true
 
-        return "#{@cur opts}function #{function_name}(#{args.join ", "}) {
+        res = "#{@cur opts}function #{function_name}(#{(a.name for a of args).join ", "}) {
                     #{@ind opts}var _res = '';
                     #{@init_defaults opts, args}
                     #{@child_code opts, new_ctx}
@@ -297,6 +297,7 @@ class NodeMacro extends NodeTagContainer
                 #{@ded opts}}
                 #{@cur opts}__ctx__.#{function_name} = #{function_name};
                 "
+        return res
 
 /**
  *
