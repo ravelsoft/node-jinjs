@@ -55,7 +55,7 @@ function compile (txt) ->
 
 parseError = (fn) -> throws fn, JinJSParseError
 
-suite = require \vows ; .describe "Expressions Test Suite"
+suite = require \vows .describe "Expressions Test Suite"
 
 
 suite.addBatch do
@@ -174,8 +174,6 @@ suite.addBatch do
             res = _parse "{{ bobo|default('bobo is not defined') }}"
             equal res.txt, 'bobo is not defined'
 
-    "The {% macro %} tag": {}
-
     "The {% extends %} tag": do
 
         "allows a template to extend another": ->
@@ -259,48 +257,14 @@ suite.addBatch do
 
         "Outputs the absolute path of the given string": ->
             res = _parse "{% abspath 'toto' %}"
-            equal res.txt, (require \path ; .join __dirname, \toto)
+            equal res.txt, (require \path .join __dirname, \toto)
+
+    "The {% macro %} tag": do
+
+        "Allows us to define functions": ->
+            res = _parse "{% macro test (a, b) %}{{ a }} {{ b }}.{% endmacro %}{{ test ('Hello', 'World') }}"
+            equal res.txt, "Hello World."
             
-/*
-parse "{% macro bab (bloub, blab=9) %}{{ bloub }} + BLABBLOUB{% endmacro %}"
-parse """
-{% macro bab (bloub, blab=9) %}
-    {# Parsing some nice bab #}
-    {{ bloub }}
-{% endmacro %}
-
-{{bab(4)}}
-"""
-
-parse "{{ toto + 2 }}"
-
-parse """
-{% extends "toto" %}
-
-{% block bl %}
-There is content in my block.
-{% endblock %}
-"""
-
-parse """
-
-{#- hep -#}
-
-cou
-
-
-{#- lonely comment -#}
-
-cou
-
-
-
-
-{#- empty -#}
-
-
-"""
-*/
 
 if argv.help
     console.log optimist.usage()

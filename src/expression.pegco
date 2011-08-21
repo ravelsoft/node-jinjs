@@ -310,21 +310,20 @@ tag_macro
         return function_name:function_name, args: if args == '' then [] else args 
 
 macro_call_arguments
-    = name:identifier ASSIGN exp:expression COMMA args:macro_call_arguments -> 
-        name.default_value = exp 
-        args.push name 
-        return args 
+    = first:macro_argument other_args:(COMMA macro_argument)* ->
+        res = [first]
+        if other_args
+            for arg of other_args
+                res.push arg.1
+        return res
 
-    / name:identifier COMMA args:macro_call_arguments -> 
-        args.push name
-        return args 
-
-    / name:identifier ASSIGN exp:expression -> 
+macro_argument
+    = name:identifier ASSIGN exp:expression -> 
         name.default_value = exp 
-        return [name] 
+        return name
 
     / name:identifier -> 
-        return [name] 
+        return name 
 
 tag_block
     = space? first_letter:[a-zA-Z_] next_letters:[-a-zA-Z0-9_]* space? -> 
