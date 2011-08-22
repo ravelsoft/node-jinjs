@@ -71,6 +71,10 @@ suite.addBatch do
         "does not let us assign to reserved-words variables": (res) ->
             parseError -> _parse "{% let instanceof = 3 %}"
 
+        "can have their results even across new lines": ->
+            res = _parse "{% let toto\n=\n 1 %}{{ toto }}"
+            equal res.txt, "1"
+
     ##
     ##  IF TAG
     ##

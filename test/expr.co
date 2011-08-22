@@ -15,7 +15,7 @@ make = (str) ->
     ctx = toto: true, tata: true, a: true
     return make_expression str, ctx
 
-suite = require \vows ; .describe "Expressions Test Suite"
+suite = require \vows .describe "Expressions Test Suite"
 
 suite.addBatch do
     "Simple operations don't change the operands": do
@@ -142,6 +142,23 @@ suite.addBatch do
             equal make(' {  } '), '{}'
         "Can be created with regular labels, string labels and complex expressions": ->
             equal make('{ a: 1, b: "toto", "coucou": f|g }'), '{ a: 1, b: "toto", "coucou": __filter_g(__ctx__.f) }'
+        "Can be fairly large": ->
+            equal "", make """{ "equals": "est égale à", 
+        "lte": "est &lt;= à", 
+        "gte": "est &gt;= à", 
+        "lt": "est &lt; à", 
+        "gt": "est &gt; à", 
+        "isset": "est défini", 
+        "and": "et", 
+        "or": "ou", 
+        "startswith": "commence par", 
+        "endswith": "termine par", 
+        "in": "est incluse dans", 
+        "not_equals": "est différente de", 
+        "not_isset": "n'est pas défini", 
+        "not_startswith": "ne commence pas par", 
+        "not_endswith": "ne termine pas par", 
+        "not_in": "n'est pas incluse dans" }"""
 
     "More complex tests involving mixing of previous ones": do
         "Function calls + filtered expression as argument": ->

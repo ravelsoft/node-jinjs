@@ -39,7 +39,7 @@ function trim (str) ->
         return null
     return str.replace(/^\s+/g,'').replace(/\s+$/g,'')
 
-_tag_search = / *([a-zA-Z][-a-zA-Z0-9_]*) *(.*)/
+_tag_search = /\s*([a-zA-Z][-a-zA-Z0-9_]*)\s+((.|\n)*)/m
 /**
  *  @param stmt The contents between {% and %}
  *  @returns    An object containing the tag portion and the contents.
