@@ -148,7 +148,7 @@ compile_grammar = (file) ->
 
 
 walkcond "./src", /\.co$/, (fname) ->
-    out_dir = fname.replace /src/ "lib"; .replace /\/[^\/]*$/ ""
+    out_dir = fname.replace /src/ "lib" .replace /\/[^\/]*$/ ""
     execute "coco -o #{out_dir} -cb #{fname}"
 
 <- wait_for_current_executions

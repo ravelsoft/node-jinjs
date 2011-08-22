@@ -25,7 +25,7 @@
      },
      "devDependencies" : {
         "pegjs": "0.6.x",
-        "coco": "0.5.x",
+        "coco": "0.6.x",
         "inotify": "latest"
      }
 }

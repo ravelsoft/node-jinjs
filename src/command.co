@@ -34,7 +34,7 @@ function compile (string) ->
 if argv.context
     context = eval "obj = #{argv.context ? '{}'};";
 if argv.cocontext
-    str = "obj = #{require "coco" ;.compile argv.cocontext, bare: true}"
+    str = "obj = #{require "coco" .compile argv.cocontext, bare: true}"
     context = eval str
 
 if context
