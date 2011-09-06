@@ -1,83 +1,441 @@
-_filters = exports
 
-_filters.\in = (obj, arr) ->
-    x = null
-    for x in arr
-        if arr.hasOwnProperty (x) and obj is arr[x]
-            return true
-    return false
+_pad = (v) ->
+    if v < 10
+        return "0#v"
+    return v
 
-_filters.\abs = (num) ->
-    return -num if num < 0
-    num
+_unicode = (s) ->
+    s = s.charCodeAt 0 .toString 16
+    return "\\u" + ("0" * (4 - s.length)) + s
 
-_filters.\capitalize = (str) ->
-    return str.charAt(0).toUpperCase() + str.slice(1)
+_resolve_attr = (obj, att) ->
+    attrs = att.split \.
+    for a of attrs
+        obj = obj[a]
+    return obj
 
-_filters.\default = (value, default_value) ->
-    return default_value if value is undefined
-    value
+_word_boundary = /\B/
 
-_filters.\filesizeformat = (value) ->
-    if value < 1024
-        return "#{value}"
-    if value < 1024 * 1024
-        val = val / 1024
-        unit = "Kb"
-    else if value < 1024 * 1024 * 1024
-        val = val / (1024 * 1024)
-        unit = "Mb"
-    else
-        val = val / (1024 * 1024 * 1024)
-        unit = "Gb"
+_url_re = //  ([a-z]+:\/\/\w([-\w\.]+)*|\w+(\.\w+)+)(:\d+)?(\/([\w\/_\.]*(\?\S+)?)?)?   //g
 
-    strval = "#{Math.round val}"
-    return "#{val.toPrecision strval.length + 3}Kb"
+exports import do
 
-_filters.\first = (arr) ->
-    return arr[0]
+    /**
+     * Return the absolute value of the argument.
+     */
+    abs: function (num)
+        return -num if num < 0
+        num
 
-_filters.\last = (arr) ->
-    return null if not arr?.length
-    arr[arr.length - 1]
+    /**
+     * A filter that batches items. It works pretty much like slice just the other way round. 
+     * It returns a list of lists with the given number of items. 
+     * If you provide a second parameter this is used to fill missing items.
+     */
+    batch: function (value, linecount, fill_with ? null)
+        result = []
+        for i from 0 to value.length - 1 by linecount
+            tmpres = []
 
-_filters.\groupby = (arr, attribute) ->
-    # FIXME : Chain objects in array that have the same attribute.
-    return _arr
+            for j from 0 to linecount - 1
+                if i + j not in value
+                    break if not fill_with?
+                    tmpres.push fill_with
+                else
+                    tmpres.push value[i + j]
 
-_filters.\join = (arr, string) ->
-    i = 0
-    _l = arr.length
-    _res = ""
+            result.push tmpres
+        return result
 
-    for i from 0 to l - 1
-        if i > 0
-            _res += string
-        _res += arr[i].toString ()
-    return _res
+    /**
+     *  Capitalize a string.
+     */
+    capitalize: function (str)
+        return str.charAt(0).toUpperCase! + str.slice(1).toLowerCase!
 
-_filters.\length = (arr) ->
-    if not arr?
-        return 0
-    arr.length
+    /**
+     *  Center monospaced text.
+     */
+    center: function (value, width ? 80)
+        # No need to change anything.
+        return value if value.length >= width - 1
 
-_filters.\lower = (value) ->
-    value.toLowerCase ()
+        leading = " " * ((width - value.length) / 2)
+        return leading + value
 
-_filters.\upper = (value) ->
-    value.toUpperCase ()
+    count: function 
+        return exports.length ...
 
-_filters.\replace = (string, regexp, newvalue) ->
-    string.replace regexp, newvalue
+    /**
+     *  Formats a date.
+     *  TODO : not completely done.
+     */
+    date: function (d, format)
+        return format.replace /%[%cdfHIjmMpSUwWxXyYzZ]/g, (s) ->
+            switch s.1
+            case \c
+                return "#{d.toLocaleDateString!} #{d.toLocaleTimeString!}"
+            case \d
+                return _pad d.getDate!
+            case \f
+                # actually milliseconds, not micro seconds like in python.
+                return d.getMilliseconds!
+            case \H
+                return _pad d.getHours!
+            case \I
+                return _pad d.getHours! % 12
+            case \j
+                # TODO get day from the start of the year
+                return ''
+            case \m
+                return _pad d.getMonth! + 1
+            case \M
+                return _pad d.getMinutes!
+            case \p
+                # TODO locale
+                return ''
+            case \S
+                return _pad d.getSeconds!
+            case \U
+                # TODO week number of the year (sunday first day, from first sunday of the year)
+                return ''
+            case \w
+                return d.getDay!
+            case \W
+                # TODO week number of the year (monday first day, from first monday of the year)
+                return ''
+            case \x
+                return d.toLocaleDateString!
+            case \X
+                return d.toLocalTimeString!
+            case \y
+                y = d.getFullYear!
+                return "" + _pad Math.round (((y / 100) - Math.floor(y / 100)) * 100)
+            case \Y
+                return d.getFullYear!
+            case \z
+                return d.getTimezoneOffset!
+            case \Z
+                try
+                    # only works with times from the time module.
+                    return d.getTimezone!
+                catch
+                    return ''
+            case \%
+                return '%'
+            default
+                return '#error'
 
-_filters.\reverse = (arr) ->
-    new_arr = arr.splice 0
-    new_arr.reverse()
-    return new_arr
+    /**
+     *  Alias for default.
+     */
+    d: function
+        return exports.\default ...
 
-_filters.\round = (value, precision) ->
-    precision ?= 0
-    value.toFixed precision
+    /**
+     *  Return a default value.
+     *  @param default_value: The value to return
+     *      when `value` is null.
+     */
+    default: function (value, default_value)
+        return default_value if not value?
+        value
 
-_filters.\trim = (value) ->
-    value?.trim() ? ""
+    /**
+     *  Return a list with 
+     */
+    dictsort: function (value, case_sensitive ? false, _by ? 'key')
+        result = []
+
+        for k, v in value
+            result.push [k, v]
+
+        # Sort the resulting dictionary.
+        result.sort (a, b) ->
+            if _by is \value then i = 1 else i = 0
+
+            a = a[i]
+            b = b[i]
+
+            if not case_sensitive
+                a = a.toString!.toUpperCase!
+                b = b.toString!.toUpperCase!
+
+            return -1 if a < b
+            return 1 if a > b
+            return 0
+
+
+        return result
+
+    /**
+     *  Alias to escape
+     */
+    e: function
+        return exports.escape ...
+
+    escape: function (value)
+        return value.replace /&/g, '&amp;'
+            .replace /</g, '&lt;'
+            .replace />/g, '&gt;'
+            .replace /'/g, '&squot;'
+            .replace /"/g, '&dquot;'
+
+    /**
+     *  Escape a string to make it Javascript/JSON compliant.
+     */
+    escapejs: function (value)
+        return value.replace /./g, (s) ->
+            if \a <= s <= \z or \A <= s <= \Z or \0 <= s <= \9
+                # regular character, just return it.
+                return s
+            return _unicode s   
+
+    filesizeformat: function (value)
+        if value < 1024
+            return "#{value}"
+        if value < 1024 * 1024
+            val = val / 1024
+            unit = "Kb"
+        else if value < 1024 * 1024 * 1024
+            val = val / (1024 * 1024)
+            unit = "Mb"
+        else
+            val = val / (1024 * 1024 * 1024)
+            unit = "Gb"
+
+        strval = "#{Math.round val}"
+        return "#{val.toPrecision strval.length + 3}Kb"
+
+    first: function (arr)
+        return arr?[0]
+
+    float: function (value)
+        res = parseFloat value
+        return 0.0 if res is NaN
+        return res
+
+    forceescape: function (value)
+        throw new Error \unimplemented
+
+    format: function (value, args ? [], kwargs ? {})
+        throw new Error \unimplemented
+
+    /**
+     *  NOTE: only usable in the {% for grouper, list %} notation.
+     *  @param attribute: The attribute to group by.
+     */
+    groupby: function (arr, attribute)
+        # FIXME : Chain objects in array that have the same attribute.
+        result = {}
+
+        for obj of arr
+            grouper = _resolve_attr obj, attribute
+
+            result[grouper] ?= []
+            result[grouper].push obj
+
+        return result
+
+    in: function (obj, arr)
+        x = null
+        for x in arr
+            if arr.hasOwnProperty (x) and obj is arr[x]
+                return true
+        return false
+
+    indent: function (value, width ? 4, indentfirst ? false)
+        first = true
+
+        return value.replace /^/gm, (s) ->
+            if not first or indentfirst
+                return "" + (" " * width) + s
+            first := false
+            return s
+        
+
+    join: function (arr, string ? "", attribute ? null)
+        if arr?.length > 0
+            if attribute
+                arr = (_resolve_attr o, attribute .toString! for o of arr)
+            return arr.join string
+        return ""
+
+    last: function (arr)
+        return null if not arr?.length
+        arr[arr.length - 1]
+
+    length: function (arr)
+        if not arr?
+            return 0
+        arr.length
+
+    lower: function (value)
+        value.toString!.toLowerCase ()
+
+    pprint: function (value, verbose ? false)
+        # FIXME
+        throw new Error \unimplemented
+
+    random: function (list)
+        if list?.length > 0
+            index = Math.floor Math.random! * (list.length - 1) + 1
+            return list[index]
+        return ""
+
+    replace: function (string, regexp, newvalue, count ? null)
+        if typeof regexp is \string
+            regexp = new RegExp regexp, \g
+
+        return string.replace regexp, (s) ->
+            if count? 
+                if count <= 0
+                    # No more replace
+                    return s
+                count := count - 1
+            return s.replace regexp, newvalue
+
+    reverse: function (arr)
+        new_arr = arr.splice 0
+        new_arr.reverse()
+        return new_arr
+
+    round: function (value, precision ? 0, method ? 'common')
+        if method is \common
+            return value.toFixed precision
+        else
+            factor = 10 ** precision
+            value *= factor
+
+            if method is \floor
+                value = Math.floor value
+            if method is \ceil
+                value = Math.ceil value
+            return (value / factor).toFixed precision
+
+    safe: function (value)
+        throw new Error "Escaping is not yet implemented"
+
+    slice: function (value, slices, fill_with ? null)
+        result = []
+
+        slice_length = Math.ceil value.length / slices
+
+        for i from 0 to slices - 1
+            tmpres = []
+
+            for j from 0 to slice_length - 1
+                pos = i * slice_length + j
+                if pos not in value
+                    break if not fill_with?
+                    tmpres.push fill_with
+                else
+                    tmpres.push value[pos]
+
+            result.push tmpres
+        return result
+
+    sort: function (value, reverse ? false, case_sensitive ? false, attribute ? null)
+        new_arr = value.splice 0
+
+        new_arr.sort (a, b) ->
+            if attribute
+                a = _resolve_attr a, attribute
+                b = _resolve_attr b, attribute
+            if not case_sensitive
+                a = a.toString!.toUpperCase!
+                b = b.toString!.toUpperCase!
+            return -1 if a < b
+            return 1 if a > b
+            return 0
+
+        new_arr.reverse! if reverse
+        return new_arr
+
+    string: function (s)
+        return s.toString!
+
+    striptags: function (val)
+        return val.replace //<(
+                '(\'|[^'])*'
+            |   "(\"|[^"])*"
+            |   [^>]
+            )+>
+            //g, ''
+
+    sum: function (container, attribute ? null, start ? 0)
+        res = 0
+
+        for o of container
+            if attribute
+                res += _resolve_attr o, attribute
+            else
+                res += o
+
+        return res + start
+        
+
+    title: function (s)
+        return (exports.capitalize o for o of s.split(/\s/)).join " "
+        
+
+    trim: function (value)
+        value?.trim() ? ""
+
+    truncate: function (s, length ? 255, killwords ? false, ellipsis ? \...)
+        end = length - 1
+
+        if end < s.length and not killwords
+            while end + 1 < s.length and not _word_boundary.test s[end + 1]
+                end += 1
+
+        if end == s.length - 1 # there was no truncating
+            ellipsis = ""
+
+        return (s.slice 0, end + 1) + ellipsis
+
+    upper: function (value)
+        value.toString!.toUpperCase ()
+
+    urlize: function (value, trim_url_limit ? null, nofollow ? false)
+        
+        return value.replace _url_re, (u) ->
+            if trim_url_limit?
+                trimmed_u = u.slice 0, trim_url_limit
+                if trimmed_u.length < u.length
+                    trimmed_u += "..."
+            else
+                trimmed_u = u
+
+            return "<a href=\"#u\"#{if nofollow then " rel=\"nofollow\"" else ""}>#trimmed_u</a>"
+
+    wordwrap: function (s, width ? 79, break_long_words ? true)
+        res = []
+        actual = ""
+        sp = /^\s+$/ # spaces are ignored at the end of line.
+
+        words = []
+        for w of s.split /\b/
+            if break_long_words and w.length > width
+                for i from 0 to w.length - 1 by width
+                    words.push w.slice i, i + width
+            else
+                words.push w
+
+        for w of words
+            if actual.length + w.length <= width or sp.test w or actual is ""
+                actual += w
+            else
+                res.push actual
+                actual = w
+
+        res.push actual
+        return res.join "\n"
+
+    xmlattr: function (d, autospace ? true)
+        res = []
+        for k, v in d
+            if v?
+                res.push "#{if autospace then " " else ""}#k=\"#{exports.e v.toString!}\""
+        return res.join ""
+

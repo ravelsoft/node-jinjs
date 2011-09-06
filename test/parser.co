@@ -55,6 +55,10 @@ function compile (txt)
 
 parseError = (fn) -> throws fn, JinJSParseError
 
+function equaltxt (exp, txt)
+    res = _parse exp
+    equal "'#{res.txt}'", "'#txt'"
+
 suite = require \vows .describe "Expressions Test Suite"
 
 
@@ -183,8 +187,113 @@ suite.addBatch do
 
     "The |filters": do
         "allow us to pass values through functions differently": ->
-            res = _parse "{{ bobo|default('bobo is not defined') }}"
-            equal res.txt, 'bobo is not defined'
+            equaltxt "{{ bobo|default('bobo is not defined') }}", 'bobo is not defined'
+
+        "`abs` returns absolute value": ->
+            equaltxt "{{ 1|abs }} : {{ -1|abs }}", '1 : 1'
+
+        "`batch` batches stuff": ->
+            equaltxt "{% for a in [1, 2, 3, 4, 5]|batch(2, 'a') %}{{ a[0] }}: {{ a[1] }},{% endfor %}", '1: 2,3: 4,5: a,'
+            equaltxt "{% for a in [1, 2, 3, 4, 5]|batch(2) %}{{ a[0] }}: {{ a[1] }},{% endfor %}", '1: 2,3: 4,5: ,'
+
+        "`capitalize` capitalizes a string": ->
+            equaltxt "{{ 'toTO'|capitalize }}", "Toto"
+
+        "`center` centers a string": ->
+            equaltxt "{{ 'aaa'|center(5) }}", " aaa"
+            equaltxt "{{ 'aaa'|center(6) }}", " aaa"
+            equaltxt "{{ 'aaa'|center(7) }}", "  aaa"
+
+        "`date` formats a date": ->
+            res = _parse "{{ d|date('%Y-%m-%d') }}", d: new Date '1970-01-01'
+            equal res.txt, '1970-01-01'
+            res = _parse "{{ d|date('%y-%m-%d') }}", d: new Date '1970-01-01'
+            equal res.txt, '70-01-01'
+
+        "`dictsort` sorts an object": ->
+            equaltxt "{{ {'c': 1, 'b': 3, 'a': 2}|dictsort }}", 'a,2,b,3,c,1'
+            equaltxt "{{ {'C': 1, 'b': 3, 'a': 2}|dictsort }}", 'a,2,b,3,C,1'
+            equaltxt "{{ {'C': 1, 'b': 3, 'a': 2}|dictsort(true) }}", 'C,1,a,2,b,3'
+
+        "`escape` or `e` escape an HTML string": ->
+            equaltxt "{{ '<a href=\"#\" title=\\'\\'>&amp;</a>'|e }}", '&lt;a href=&dquot;#&dquot; title=&squot;&squot;&gt;&amp;amp;&lt;/a&gt;'
+
+        "`escapejs` escape a string to make it javascript/or JSON safe": ->
+            equaltxt "{{ 'a\"b\\'<{}'|escapejs }}", 'a\\u0022b\\u0027\\u003c\\u007b\\u007d'
+
+        "`groupby` groups items": ->
+            equaltxt "{% for g, l in [ {toto:'hey', s: '1' }, {toto:'ho', s: 'a'}, {toto:'hey', s:'b'}, {toto: 'hi', s:'c'}]|groupby('toto') %}{{ g }}{% for i in l %}-{{ i.s }}-{% endfor %}{% endfor %}", 'hey-1--b-ho-a-hi-c-'
+
+        "`indent` indents a string": ->
+            equaltxt '{{ "hello\\nyou\\nhow\\nare\\nyou"|indent(2) }}', 'hello\n  you\n  how\n  are\n  you'
+            equaltxt '{{ "hello\\nyou\\nhow\\nare\\nyou"|indent(2, true) }}', '  hello\n  you\n  how\n  are\n  you'
+
+        "`join` joins an array of strings or attributes of an object": ->
+            equaltxt '{{ ["hello", "pretty", "world"]|join }}', 'helloprettyworld'
+            equaltxt '{{ ["hello", "pretty", "world"]|join(" ") }}', 'hello pretty world'
+            equaltxt '{{ [ { s:"hello" }, {s: "pretty"}, {s: "world"}]|join("-", "s") }}', 'hello-pretty-world'
+
+        "`random` selects a random item of a list": ->
+            { txt: t } = _parse '{{ ["a", "b", "c", "d"]|random }}'
+            equal true, (t is \a or t is \b or t is \c or t is \d)
+
+        "`replace` replaces text": ->
+            equaltxt '{{ "yooo"|replace("o", "a") }}', 'yaaa'
+            equaltxt '{{ "yooo"|replace("o", "a", 2) }}', 'yaao'
+            equaltxt '{{ "yoaopouoa"|replace(/oa/g, "-") }}', 'y-opou-'
+            equaltxt '{{ "yoaopouoa"|replace(/oa/g, "-", 1) }}', 'y-opouoa'
+
+        "`round` rounds numbers": ->
+            equaltxt '{{ 42.55|round }}', '43'
+            equaltxt '{{ 42.55|round(1) }}', '42.5'
+            equaltxt '{{ 42.55|round(1, "floor") }}', '42.5'
+            equaltxt '{{ 42.55|round(1, "ceil") }}', '42.6'
+
+        "`slice` slices stuff": ->
+            equaltxt "{% for row in [1, 2, 3, 4, 5]|slice(2, 'a') %}{% for col in row %}{{ col }}-{% endfor %}.{% endfor %}", '1-2-3-.4-5-a-.'
+            equaltxt "{% for row in [1, 2, 3, 4, 5]|slice(2) %}{% for col in row %}{{ col }}-{% endfor %}.{% endfor %}", '1-2-3-.4-5-.'
+
+        "`sort` sorts": ->
+            equaltxt "{{ [1, 4, 2, 3]|sort }}", '1,2,3,4'
+            equaltxt "{{ [1, 4, 2, 3]|sort(true) }}", '4,3,2,1'
+            equaltxt "{{ ['a', 'B', 'c', 'D']|sort(false, true) }}", 'B,D,a,c'
+            equaltxt "{{ ['a', 'B', 'c', 'D']|sort(false, false) }}", 'a,B,c,D'
+            equaltxt "{{ ['a', 'B', 'c', 'D']|sort(false) }}", 'a,B,c,D'
+            equaltxt "{% for o in [{ a: { b: 'z' } },{ a: { b: 'y' } },{ a: { b: 'x' } }]|sort(false, false, 'a.b') %}{{ o.a.b }}{% endfor %}", 'xyz'
+
+        "`striptags` removes HTML tags": ->
+            equaltxt "{{ '<a href=\">\"></a>'|striptags }}", ''
+            equaltxt "{{ '<a href=\"\\\">\"></a>'|striptags }}", ''
+            equaltxt "{{ '<a t=\\'\\\\\\'>\\' b=\"\\\"bp>\">ha</a>'|striptags }}", "ha"
+
+        "`start` does some funky sums": ->
+            equaltxt "{{ [1, 2, 3]|sum }}", "6"
+            equaltxt "{{ [1, 2, 3]|sum(null, 4) }}", "10"
+            equaltxt "{{ [{a: 1}, {a: 2}, {a: 3}]|sum('a', 4) }}", "10"
+
+        "`title` titleize text": ->
+            equaltxt "{{ 'britney shaved her head'|title }}", "Britney Shaved Her Head"
+            equaltxt "{{ 'britney    shaVED  her head'|title }}", "Britney    Shaved  Her Head"
+            equaltxt "{{ 'été écolo'|title }}", "Été Écolo"
+
+        "`truncate` truncates text": ->
+            equaltxt "{{ 'Hey hey hey'|truncate(4) }}", "Hey hey..."
+            equaltxt "{{ 'Hey hey hey'|truncate(4, true) }}", "Hey ..."
+            equaltxt "{{ 'Hey hey hey'|truncate(11) }}", "Hey hey hey"
+            equaltxt "{{ 'Hey hey hey'|truncate(11, true) }}", "Hey hey hey"
+
+        "`urlize` converts urls to links": ->
+            equaltxt "{{ 'Go to www.google.com to learn more or https://github.com/ for cool stuff'|urlize(10, true) }}", 'Go to <a href="www.google.com" rel="nofollow">www.google...</a> to learn more or <a href="https://github.com/" rel="nofollow">https://gi...</a> for cool stuff'
+
+        "`wordwrap` wraps words": ->
+            equaltxt "{{ 'Hey hey hey hey hey'|wordwrap(10) }}", 'Hey hey \nhey hey \nhey'
+            equaltxt "{{ 'Hey hey hey hey hey'|wordwrap(7) }}", 'Hey hey \nhey hey \nhey'
+            equaltxt "{{ 'Hey hey hey hey hey'|wordwrap(2, false) }}", 'Hey \nhey \nhey \nhey \nhey'
+            equaltxt "{{ ''|wordwrap(7) }}", ''
+
+        "`xmlattr` makes attributes": ->
+            equaltxt "<ul{{ { id: 'plouf', 'class': 'babo baba' }|xmlattr }}></ul>", '<ul id="plouf" class="babo baba"></ul>'
+
 
     "The {% extends %} tag": do
 

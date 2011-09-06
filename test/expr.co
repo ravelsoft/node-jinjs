@@ -37,6 +37,10 @@ suite.addBatch do
         "Regexp with post qualifiers (gim)": ->
             equal make('/regexp/gi'), '/regexp/gi'
 
+    "Numbers": do
+        "comprise also negative values": ->
+            equal make("-1"), "-1"
+
     "Out of context variables are prefixed with __ctx__, those inside are not.": do
         "Simple OOC variable": -> 
             equal make("prout"), "__ctx__.prout"

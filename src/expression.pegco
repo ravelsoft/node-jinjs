@@ -123,7 +123,7 @@ identifier
     = first:[$a-zA-Z_] rest:[$a-zA-Z_0-9]* -> 
         ident = "#{first}#{if rest then rest.join "" else ""}"
         if ident of reserved_words
-            throw new JinJSParseError "can't use '#{ident}' as a variable name"
+            throw new Error "can't use '#{ident}' as a variable name"
         if ident of reserved_and_prefixed
             return "_#{ident}"
         return ident
@@ -143,6 +143,7 @@ filter_identifier
 number
     = f:[0-9]+ d:"." s:[0-9]+ -> return "#{f.join ""}#{d}#{s.join ""}" 
     / n:[0-9]+ -> return "#{n.join ""}" 
+    / MINUS n:number -> return "-#n"
 
 string
     = space? "'" sglcnt:single_quoted_contents? "'" space? -> return "'#{sglcnt}'" 
@@ -179,6 +180,9 @@ regexp_terminal
 
 space
     = [\t\n\r ]+ -> return " " 
+
+MINUS
+    = space? "-" space? -> return "-"
 COMMA
     = space? "," space? -> return "," 
 COLON
