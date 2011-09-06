@@ -420,7 +420,7 @@ class NodeFor extends NodeTagContainer
 
         return "#{@cur opts}__for(__ctx__, #{condition}, '#{key}', '#{value}', (function () {
                     #{@child_code opts, ctx}
-                }), (function(){
+                }), (function(loop){
                 #{super.call this, opts, ctx}
             }) );"
 

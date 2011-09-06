@@ -35,7 +35,7 @@ function __for (__ctx__, condition, keyname, valuename, childcode, elsenode) ->
         __ctx__[valuename] = _prev_value
 
     if elsenode?
-        elsenode()
+        elsenode loop
 
     __ctx__.loop = _prev_loop
     __ctx__[keyname] = _prev_key

@@ -155,6 +155,14 @@ suite.addBatch do
             equal res.ctx.key, undefined
             equal res.ctx.val, undefined
 
+        "has an else clause that executes when the for loop did not run": ->
+            res = _parse "{% for key, val in { } %}hey{% else %}empty{% endfor %}"
+            equal res.txt, 'empty'
+
+        "has an else clause that does not execute when the for loop did run": ->
+            res = _parse "{% for key in ['hello'] %}{{ key }}{% else %}empty{% endfor %}"
+            equal res.txt, 'hello'
+
 
         # Should investigate the whole "callee thing"
         # "can be called recursively": ->
