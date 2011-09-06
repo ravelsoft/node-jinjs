@@ -1,4 +1,4 @@
-function __for (__ctx__, condition, keyname, valuename, childcode, elsenode) ->
+function __for (__ctx__, condition, keyname, valuename, childcode, elsenode)
     i = 0
     _ref = null
     _prev_loop = __ctx__.loop
@@ -40,7 +40,7 @@ function __for (__ctx__, condition, keyname, valuename, childcode, elsenode) ->
     __ctx__.loop = _prev_loop
     __ctx__[keyname] = _prev_key
 
-function __in (obj, container) ->
+function __in (obj, container)
     if obj instanceof Array
         return __indexOf.call(container, obj) > -1
 
@@ -51,7 +51,7 @@ __indexOf = [].indexOf ? (x) ->
         if this[i] is x
             return i
 
-function __import (obj, src) ->
+function __import (obj, src)
     own = {}.hasOwnProperty
     for key in src 
         obj[key] = src[key] if own.call src, key

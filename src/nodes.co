@@ -12,12 +12,14 @@ parse_block = make_parse_rule \tag_block
 parse_import = make_parse_rule \tag_import
 parse_string = make_parse_rule \string
 
-function trim (string) -> return if not string then "" else string.replace(/^\s*|\s*$/, '')
+function trim (string) 
+    return if not string then "" else string.replace(/^\s*|\s*$/, '')
+
 /**
  *  @param str  a string
  *  @returns    an escaped string suitable to be quoted.
  */
-function escape (str) ->
+function escape (str)
     str.replace /\\/g, '\\\\' # Backslash escaping
         .replace /["']/g, (str) -> # Quote escaping
             "\\#{str}"
@@ -25,7 +27,7 @@ function escape (str) ->
         .replace /\r/g, '\\r' # Carriage return
         .replace /\t/g, '\\t' # Carriage return
 
-function template_expr_is_string (expr) ->
+function template_expr_is_string (expr)
     try
         parse_string expr
         return true
@@ -36,21 +38,21 @@ function template_expr_is_string (expr) ->
  *
  */
 class Node
-    (specs) ->
-        @contents = specs.contents if specs?.contents
-    compile: ->
+    ({ @contents }:specs ? {}) ->
+
+    compile: function
         throw new Error "This function should never be called."
-    ind: (opts) ->
+    ind: function (opts)
         opts.__indent__ ?= 0
         opts.__indent__ = opts.__indent__ + 1
         ind = opts.__indent__ * 4
         return "\n" + (" " * ind)
-    ded: (opts) ->
+    ded: function (opts)
         opts.__indent__ ?= 1
         opts.__indent__ = opts.__indent__ - 1
         ind = opts.__indent__ * 4
         return "\n" + " " * ind
-    cur: (opts) ->
+    cur: function (opts)
         ind = (opts.__indent__ ? 0) * 4
         return "\n" + " " * ind
 /**
@@ -58,17 +60,17 @@ class Node
  */
 class NodeBasic extends Node
     (specs) -> super ...
-    compile: function (opts, ctx) ->
+
+    compile: function (opts, ctx)
         "#{@cur opts}_res += '#{escape @contents}';"
 
-    append: function (contents) ->
+    append: function (contents)
         @contents += contents
 
 class NodeComment extends Node
-    (specs) ->
-        @contents = specs.contents ? ""
+    ({ @contents ? "" }) ->
 
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         "#{@cur opts}/*#{@contents}*/"
 
 /**
@@ -79,7 +81,7 @@ class NodeList extends Node
         @nodes = []
         super ...
 
-    push: function (node) ->
+    push: function (node)
         if not node?
             return
 
@@ -92,7 +94,7 @@ class NodeList extends Node
         else
             @nodes.push node
         
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         ctx ?= {}
         res = ""
         for node of @nodes
@@ -104,16 +106,19 @@ class NodeList extends Node
  */
 class NodePrint extends Node
     (specs) -> super ...
-    compile: function (opts, ctx) ->
+
+    compile: function (opts, ctx)
         return "#{@cur opts}_res += ((_ref = #{make_expression @contents, ctx}) !== undefined && _ref !== null ? _ref : '').toString();"
 
 class NodeTag extends Node
     @tag = \__tag__
+
     (specs) -> super ...
-    compile: ->
+
+    compile: function
         throw new JinJSUnimplementedException "The NodeTag is not meant to be used !"
 
-    toString: ->
+    toString: function
         return "Node: #{this.constructor.displayName}"
 
 /**
@@ -124,7 +129,7 @@ class NodeExtends extends NodeTag
 
     (specs) -> super ...
 
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         opts.'extends' = true
         tpl_name = parse_extends @contents, opts
         if template_expr_is_string tpl_name
@@ -137,7 +142,7 @@ class NodeImport extends NodeTag
     @tag = \import
     (specs) -> super ...
 
-    compile: (opts, ctx) ->
+    compile: function (opts, ctx)
         { tpl, as, imports, with_context } = parse_import
 
         opts.\clone = true # We're going to need the clone function
@@ -175,7 +180,7 @@ class NodeInclude extends NodeTag
 
     (specs) -> super ...
 
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         tpl_name = parse_extends @contents, opts
 
         if template_expr_is_string tpl_name
@@ -189,7 +194,7 @@ class NodeImport extends NodeTag
     @tag = \import
     (specs) -> super ...
 
-    compile: (opts, ctx) ->
+    compile: function (opts, ctx)
         { template, as_name, variables, with_context } = parse_import @contents, ctx
 
         opts.\clone = true # We're going to need the clone function
@@ -231,7 +236,7 @@ class NodeFromImport extends NodeImport
 class NodeAbspath extends NodeTag
     @tag = \abspath
     (specs) -> super ...
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         path = parse_string @contents, ctx
         return "#{@cur opts}_res += require('path').join(__dirname, #{path});"
 /**
@@ -242,7 +247,7 @@ class NodeLet extends NodeTag
 
     (specs) -> super ...
 
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         { variable_name, expression } = parse_let @contents, ctx
 
         ctx[variable_name] = true # The variable name is now accessible to the rest of the template.
@@ -252,7 +257,7 @@ class NodeDo extends NodeTag
     @tag = \do
     (specs) -> super ...
 
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         return "#{@cur opts}#{make_expression @contents, ctx};"
 
 /**
@@ -262,7 +267,7 @@ class NodeTagContainer extends NodeList
         super ...
         @child_node = specs.child_node
 
-    child_code: (opts, ctx) ->
+    child_code: function (opts, ctx)
         return (@child_node?.compile opts, ctx) ? ""
 
 /**
@@ -274,13 +279,13 @@ class NodeMacro extends NodeTagContainer
 
     (specs) -> super ...
 
-    init_defaults: (opts, args) ->
+    init_defaults: function (opts, args)
         res = ""
         for a of args
             if a.default_value
                 res += "#{@cur opts}#{a.name} = (#{a.name} === undefined) ? (#{a.default_value}) : #{a.name};"
 
-    compile: (opts, ctx) ->
+    compile: function (opts, ctx)
         { args, function_name } = parse_macro @contents, ctx
 
         ctx[function_name] = true # This macro is now accessible to all the template code that follows.
@@ -308,7 +313,7 @@ class NodeBlock extends NodeTagContainer
 
     (specs) -> super ...
 
-    compile: (opts, ctx) ->
+    compile: function (opts, ctx)
         block_name = parse_block @contents, ctx
         opts.blocks ?= {}
 
@@ -335,13 +340,13 @@ class NodeBlock extends NodeTagContainer
 class NodeElse extends NodeTagContainer
     @tag = \else
 
-    @parse = function (pd) ->
+    @parse = function (pd)
         return new NodeElse child_node: pd.child_node
 
     (specs) ->
         super ...
 
-    compile: (opts, ctx) ->
+    compile: function (opts, ctx)
         res = "#{@ded opts}} else {" 
         @ind opts
         res += "#{@child_code opts, ctx}"
@@ -354,7 +359,7 @@ class NodeElseIf extends NodeTagContainer
     (specs) ->
         super ...
 
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         if not trim @contents
             throw new Error "{% elseif <condition> %}: condition can't be empty."
 
@@ -371,7 +376,7 @@ class NodeIf extends NodeTagContainer
     (specs) ->
         super ...
 
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         if not trim @contents
             throw new Error "{% if <condition> %}: condition can't be empty."
 
@@ -386,13 +391,13 @@ class NodeElseFor extends NodeTagContainer
     @tag = \else
     @until = \endfor
 
-    @parse = function (pd) ->
+    @parse = function (pd)
         return new NodeElseFor child_node: pd.child_node
     
     (specs) ->
         super ...
 
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         # loop.index is not defined if we didn't enter the loop.
         res = "#{@ded opts}if (loop.index === undefined) {"
         @ind opts
@@ -410,7 +415,7 @@ class NodeFor extends NodeTagContainer
     (specs) ->
         super ...
 
-    compile: function (opts, ctx) ->
+    compile: function (opts, ctx)
         { key, value, condition } = parse_for @contents, ctx
 
         # We want to include the __for function

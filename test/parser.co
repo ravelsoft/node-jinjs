@@ -33,7 +33,7 @@ run = (str, ctx) ->
             console.log compiled
         throw e
 
-function parse (txt, ctx) ->
+function parse (txt, ctx)
     return ->
         if not ctx
             ctx := {} <<< test_context
@@ -42,7 +42,7 @@ function parse (txt, ctx) ->
 
 _parse = (txt, ctx) -> (parse txt, ctx)()
 
-function compile (txt) ->
+function compile (txt)
     try
         exports = {}
         compiled = e.getTemplateSourceFromString txt

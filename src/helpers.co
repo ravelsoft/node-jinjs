@@ -8,7 +8,7 @@
  *  @param filter: a callback (str) -> that transforms the source before
  *      giving it to JinJS.
  */
-function registerExtension (ext, filter) ->
+function registerExtension (ext, filter)
     filter ?= (str) -> str
 
     require.extensions[ext] = (module, filename) ->

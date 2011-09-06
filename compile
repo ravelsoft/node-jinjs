@@ -41,13 +41,13 @@ if argv.help
     console.log optimist.help()
     process.exit 0
 
-function dirwalk (dirname, callback) ->
+function dirwalk (dirname, callback)
     callback dirname
     for f of fs.readdirSync dirname
         if f[0] != "." and fs.statSync("#{dirname}/#{f}").isDirectory()
             dirwalk "#{dirname}/#{f}", callback
 
-function walkcond (dirname, pattern, callback) ->
+function walkcond (dirname, pattern, callback)
     for f of fs.readdirSync dirname
         path = "#{dirname}/#{f}"
         if path.match pattern
@@ -57,7 +57,7 @@ function walkcond (dirname, pattern, callback) ->
 
 _to_finish_executing = 0
 _to_do_next = []
-function execute (command, callback) ->
+function execute (command, callback)
     _to_finish_executing := _to_finish_executing + 1
     console.log command
     env = {}
@@ -79,7 +79,7 @@ function execute (command, callback) ->
             for cb of to_do_next
                 cb ()
 
-function wait_for_current_executions (callback) ->
+function wait_for_current_executions (callback)
     if _to_finish_executing > 0
         _to_do_next.push callback
     else
@@ -162,7 +162,7 @@ if argv.watch
 
     _watches = {}
 
-    addWatch = function (watch) ->
+    addWatch = function (watch)
         (dirname) <- dirwalk watch.path
         if not _watches[dirname]?
             _watches[dirname] = []

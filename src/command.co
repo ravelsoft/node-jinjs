@@ -28,7 +28,7 @@ defaultEnvironment.filter_exp = argv.filter_exp ? "require('jinjs/lib/filters')"
 defaultEnvironment.require_exp = argv.require_exp ? "require"
 defaultEnvironment.util_exp = argv.util_exp ? "require('jinjs/lib/utils')"
 
-function compile (string) ->
+function compile (string)
     return defaultEnvironment.getTemplateSourceFromString string
 
 if argv.context
@@ -40,7 +40,7 @@ if argv.cocontext
 if context
     defaultEnvironment.filter_exp = "require('./filters')"
 
-function result (data) ->
+function result (data)
     if not context
         sys.print data
     else

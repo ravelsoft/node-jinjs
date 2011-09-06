@@ -22,7 +22,7 @@ class Lexer
      *  @param b: Second Operand
      *  @returns 1, 0 or -1
      */
-    __token_sort = function (a, b) ->
+    __token_sort = function (a, b)
         if a.pos == -1 
             return 1 # -1 is bigger than everyone !
         if b.pos == -1 
@@ -48,23 +48,23 @@ class Lexer
 
         @tokens_order = ( (tok: token, pos: -1) for token of specs.tokens)
 
-    computeTokenPositions: function ->
+    computeTokenPositions: function
         for token of @tokens_order
             token.pos = @input.indexOf token.tok, @position
         @tokens_order.sort __token_sort
 
-    feed: function (str) ->
+    feed: function (str)
         @input = str
         @position = 0
         @lineno = 0
         @computeTokenPositions()
 
-    advance: function (to_position) ->
+    advance: function (to_position)
         res = @input.slice @position, to_position
         @position = to_position
         return res
 
-    advanceCurrentToken: function ->
+    advanceCurrentToken: function
         next_token = @tokens_order.0
 
         if next_token.tok == "\n"
@@ -77,7 +77,7 @@ class Lexer
     /**
      *  Return the next token in the input stream.
      */
-    next: function ->
+    next: function
         if not @input?
             throw message: "Lexer has not been fed an input."
 
@@ -106,7 +106,7 @@ class Lexer
      *  Return the next token in the input stream, and cache its result, so that
      *  every subsequents call to peek and the next call to next() return the same token
      */
-    peek: function ->
+    peek: function
         if @_cached_next == undefined
             @_cached_next = @next()
         return @_cached_next

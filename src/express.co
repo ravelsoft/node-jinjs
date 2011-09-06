@@ -7,18 +7,18 @@ class ExpressEnvironment extends BasicFileEnvironment
     /**
      *  Constructor.
      */
-    (specs) -> 
+    (specs) ->
         super ...
         @track_changes = specs.track_changes
 
     /**
      *  @param path: The path to monitor for changes.
      */
-    trackFile: (path) ->
+    trackFile: function (path)
         if @track_changes
             return super.call this, path
 
-    getTemplateFromString: (str, ctx) ->
+    getTemplateFromString: function (str, ctx)
         # Return the cache at this stage since express only sends us the text
         # to compile.
         return @cache[ctx.filename] if ctx.filename in @cache
@@ -43,7 +43,7 @@ class ExpressEnvironment extends BasicFileEnvironment
  *
  *  @return A function taking a context as parameter.
  */
-function compile (str, options) ->
+function compile (str, options)
     # If we want something to pre-parse our template before.
     if options.jinjs_pre_compile
         str = options.jinjs_pre_compile str
