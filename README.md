@@ -14,5 +14,5 @@ As stated on Jinja's home page, *"Jinja Is Beautiful"*
 
 JinJS is the native port of Jinja to the world of NodeJS. Just like Jinja, it aims to transform template documents to native javascript code to maximize execution speed.
 
-Head over to the [Documentation](https://bitbucket.org/ravelsoft/node-jinjs/wiki/Home)
+Head over to the [Documentation](https://github.com/Ravelsoft/node-jinjs/wiki)
 
