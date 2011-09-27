@@ -459,7 +459,7 @@ class NodeFor extends NodeTagContainer
         return "#{@cur opts}(function() {
             var _fref = #condition || [], _prev_loop = #l, _prev_key = #k, _prev_value = #v, k = null, v = null, i = 0, l = 0, x = null, last_v = null, last_k = null;
             #l = { };
-            if (_fref instanceof Array) {
+            #{@cur opts}if (_fref instanceof Array) {
                 l = _fref.length;
                 for (i = 0; i < l; i++) {
                     #l.last = (i == l - 1);
@@ -469,7 +469,7 @@ class NodeFor extends NodeTagContainer
                     #k = _fref[i]; #{if value then "#v = i;" else ""}
                     #{@child_code opts, ctx}
                 }
-            } else {
+            #{@cur opts}} else {
                 #l = { first: true, last: false };
                 l = Object.keys(_fref).length;
                 
@@ -484,7 +484,7 @@ class NodeFor extends NodeTagContainer
                     #l.first = false;
                 } }
             }
-            if (#l.index == undefined) {
+            #{@cur opts}if (#l.index == undefined) {
                 #{super.call this, opts, ctx}
             }
             #l = _prev_loop; #k = _prev_key; #{if value then "#v = _prev_value;" else ""}
