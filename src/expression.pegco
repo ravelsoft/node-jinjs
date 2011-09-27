@@ -10,7 +10,7 @@
             args = ""
             args = ", #{f.args}" if f.args
 
-            res = "#{f.name}.call(__ctx__,#{res}#{args})"
+            res = "#{f.name}.call($$,#{res}#{args})"
 
         return res
 
@@ -88,7 +88,7 @@ ic_member_expression_rec
     = xp:ic_member_expression DOT rec:ic_member_expression_rec -> return "#{xp}#{rec}"
     / ic_member_expression
 
-# In context member expression : no escaping with __ctx__
+# In context member expression : no escaping with $$
 ic_member_expression
     = p:ic_primary_expression DOT i:ic_member_expression -> return p + "." + i 
     / p:ic_primary_expression arr:array_indexing_rec -> return "#{p}#{arr}" 
@@ -131,7 +131,7 @@ identifier
 
 /* Used for any variable of function name */
 primary_identifier
-    = ident:identifier -> return "__ctx__.#{ident}"
+    = ident:identifier -> return "$$.#{ident}"
 
 /* Used for filters 
 */

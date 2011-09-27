@@ -25,8 +25,8 @@ if (!Object.keys) Object.keys = function(o){
 
 {% for name, contents in blocks %}
 // Block declaration of "{{ name }}"
-function __block_{{ name }} (__ctx__) {
-    var _b = (__ctx__ ? __ctx__.__blocks__ : {});
+function __block_{{ name }} ($$) {
+    var _b = ($$ ? $$.__blocks__ : {});
     var _res = "";
     var __extends__ = null;
     {{ contents }}
@@ -37,21 +37,21 @@ function __block_{{ name }} (__ctx__) {
 // End Block Definitions
 {% endif %}
 // RENDERING FUNCTION, EVERYTHING HAPPENS HERE.
-function render (__ctx__) {
-    __ctx__ = (__ctx__ === undefined || __ctx__ === null) ? {} : __ctx__;
+function render ($$) {
+    $$ = ($$ === undefined || $$ === null) ? {} : $$;
     var _ref = undefined;
     var _res = '';
     var _i = 0;
     var __extends__ = null;
     {% if blocks %}
     var _b = null;
-    (__ctx__.__blocks__ == null) && (__ctx__.__blocks__ = {});
-    _b = __ctx__.__blocks__;
+    ($$.__blocks__ == null) && ($$.__blocks__ = {});
+    _b = $$.__blocks__;
     var __newblocks__ = {};
     var _block_iterator = null;
     {% endif %}
     {{ body }}
-    if (__extends__ !== undefined && __extends__ !== null) return __extends__.render(__ctx__);
+    if (__extends__ !== undefined && __extends__ !== null) return __extends__.render($$);
     return _res;
 }
 exports.render = render;
