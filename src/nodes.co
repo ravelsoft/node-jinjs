@@ -330,7 +330,7 @@ class NodeBlock extends NodeTagContainer
         return "#{@cur opts}// Adding the current block as the super of the currently defined block with the same name.
             #{@cur opts}if (_b['#{block_name}'] !== undefined) {
             #{@ind opts}(function (original) {
-                #{@ind opts}_b['#{block_name}'] = function (__ctx__) { return original.call({ _super: __block_#{block_name}}, __ctx__); };
+                #{@ind opts}_b['#{block_name}'] = function (__ctx__) { return original.call({ _super: function () { __block_#{block_name}(__ctx__) } }, __ctx__); };
             #{@ded opts}})(_b['#{block_name}']);
         #{@ded opts}} else { _b['#{block_name}'] = __block_#{block_name}; }
         #{@cur opts}_res += _b['#{block_name}'](__ctx__);"

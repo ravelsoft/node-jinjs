@@ -340,6 +340,12 @@ suite.addBatch do
             res = _parse "{% extends base %}{% block b %}{{ super() }} world{% endblock %}" base: base
             equal res.txt, 'hello world'
 
+        "defines a super() function for previous blocks that works with context": ->
+            base = compile "{% block b %}hello $myvar{% endblock %}"
+            res = _parse "{% extends base %}{% block b %}{{ super() }} world{% endblock %}" base: base, myvar: "beautiful"
+            equal res.txt, 'hello world'
+
+
         "can be redefined in child templates": ->
             base = compile ":{% block b %}should not see me{% endblock %}:"
             res = _parse "{% extends base %}should not see me{% block b %}hello{% endblock %}", base: base
