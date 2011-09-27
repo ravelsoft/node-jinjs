@@ -85,27 +85,27 @@ suite.addBatch do
 
     "Filters": do
         "can be named even with reserved words": ->
-            equal make("va|default"), "$default(__ctx__.va)"
+            equal make("va|default"), "$default.call(__ctx__,__ctx__.va)"
         "An OOC variable through a filter": ->
-            equal make("variable|f"), "$f(__ctx__.variable)"
+            equal make("variable|f"), "$f.call(__ctx__,__ctx__.variable)"
         "Dotted variable through a filter": ->
-            equal make("toto.tata(4)|f"), "$f(toto.tata(4))"
+            equal make("toto.tata(4)|f"), "$f.call(__ctx__,toto.tata(4))"
         "Filter taking an argument": ->
-            equal make("variable|f(2)"), "$f(__ctx__.variable, 2)"
+            equal make("variable|f(2)"), "$f.call(__ctx__,__ctx__.variable, 2)"
         "Filter with several arguments, one of which an OOC var": ->
-            equal make("variable|f(2, toto)"), "$f(__ctx__.variable, 2, toto)"
+            equal make("variable|f(2, toto)"), "$f.call(__ctx__,__ctx__.variable, 2, toto)"
         "Simple filter chaining": ->
-            equal make("v|f|g"), "$g($f(__ctx__.v))"
+            equal make("v|f|g"), "$g.call(__ctx__,$f.call(__ctx__,__ctx__.v))"
         "More complex filter chaining + arguments": ->
-            equal make("variable|f(2 + tata, prout * toto)|g"), "$g($f(__ctx__.variable, 2 + tata, __ctx__.prout * toto))"
+            equal make("variable|f(2 + tata, prout * toto)|g"), "$g.call(__ctx__,$f.call(__ctx__,__ctx__.variable, 2 + tata, __ctx__.prout * toto))"
         "Another complex filtering expression": ->
-            equal make("variable|f(2 + tata|g, prout * toto)"), "$f(__ctx__.variable, 2 + $g(tata), __ctx__.prout * toto)"
+            equal make("variable|f(2 + tata|g, prout * toto)"), "$f.call(__ctx__,__ctx__.variable, 2 + $g.call(__ctx__,tata), __ctx__.prout * toto)"
         "Arithmetics with a filter": ->
-            equal make("2 + tata|g"), "2 + $g(tata)"
+            equal make("2 + tata|g"), "2 + $g.call(__ctx__,tata)"
         "More complex arithmetics with filters": ->
-            equal make('toto|f(3) == 2'), '$f(toto, 3) == 2'
+            equal make('toto|f(3) == 2'), '$f.call(__ctx__,toto, 3) == 2'
         "Filtered function call": ->
-            equal make('f()|f'), '$f(__ctx__.f())'
+            equal make('f()|f'), '$f.call(__ctx__,__ctx__.f())'
 
     "Arrays and indexing": do
         "Empty Array": ->
@@ -145,11 +145,11 @@ suite.addBatch do
         "Can be empty (with space)": ->
             equal make(' {  } '), '{}'
         "Can be created with regular labels, string labels and complex expressions": ->
-            equal make('{ a: 1, b: "toto", "coucou": f|g }'), '{ a: 1, b: "toto", "coucou": $g(__ctx__.f) }'
+            equal make('{ a: 1, b: "toto", "coucou": f|g }'), '{ a: 1, b: "toto", "coucou": $g.call(__ctx__,__ctx__.f) }'
 
     "More complex tests involving mixing of previous ones": do
         "Function calls + filtered expression as argument": ->
-            equal make("a(b(1|f))"), "a(__ctx__.b($f(1)))"
+            equal make("a(b(1|f))"), "a(__ctx__.b($f.call(__ctx__,1)))"
 
     "Expressions": do
         "Can have space around them": ->

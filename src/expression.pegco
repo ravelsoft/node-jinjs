@@ -10,7 +10,7 @@
             args = ""
             args = ", #{f.args}" if f.args
 
-            res = "#{f.name}(#{res}#{args})"
+            res = "#{f.name}.call(__ctx__,#{res}#{args})"
 
         return res
 

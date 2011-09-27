@@ -341,9 +341,9 @@ suite.addBatch do
             equal res.txt, 'hello world'
 
         "defines a super() function for previous blocks that works with context": ->
-            base = compile "{% block b %}hello $myvar{% endblock %}"
+            base = compile "{% block b %}hello {{myvar}}{% endblock %}"
             res = _parse "{% extends base %}{% block b %}{{ super() }} world{% endblock %}" base: base, myvar: "beautiful"
-            equal res.txt, 'hello world'
+            equal res.txt, 'hello beautiful world'
 
 
         "can be redefined in child templates": ->
