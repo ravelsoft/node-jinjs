@@ -11,15 +11,9 @@ class Environment
         environment = env
         return eval t
 
-    (specs) ->
-        specs ?= {}
-        @filter_exp = specs.filter_exp
-        @require_exp = specs.require_exp
-        @util_exp = specs.util_exp
-        @parser = specs.parser ? new Parser()
-        @pre_compile_func = specs.pre_compile_func
+    ({@utils ? require("./utils"), @filters ? require("./filters"), @parser ? new Parser!, @pre_compile_func ? "", @require_exp ? 'require'} ? {}) ->
 
-    getTemplateFromString: (str) ->
+    getTemplateFromString: function (str)
         try
             exports = {} # Necessary to get the render() function
             compiled = @getTemplateSourceFromString str
@@ -30,14 +24,17 @@ class Environment
                 console.log compiled
             throw e
 
-    getTemplateSourceFromString: (str) ->
+    getTemplateSourceFromString: function (str)
         str = @pre_compile_func str if @pre_compile_func
 
-        ast = @parser.parse str
-        opts = __indent__: 1
+        ast = @parser.parse str, compilation_ctx
+        opts = {__indent__: 1, @utils, @filters}
 
-        body = ast.compile opts, {}
-        opts <<< { body, @filter_exp, @require_exp, @util_exp }
+        compilation_ctx = filters_used: [], utils_used: [] 
+        compilation_ctx <<< {@filters, @utils}
+        body = ast.compile opts, compilation_ctx
+
+        opts <<< compilation_ctx <<< { body, @require_exp }
         return render_template opts
 
 /**

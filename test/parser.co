@@ -14,7 +14,7 @@ optimist = require \optimist
 { argv } = optimist
 
 { Environment } = require \../lib/environment
-e = new Environment filter_exp: 'require(\"../lib/filters\")', util_exp: 'require(\"../lib/utils\")'
+e = new Environment filters: require("../lib/filters"), utils: require("../lib/utils")
 
 test_context = do
     foo: "foo"

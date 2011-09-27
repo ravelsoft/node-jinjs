@@ -1,16 +1,16 @@
-var __filter__ = {{ filter_exp|default("require('jinjs/lib/filters')") }};
-var __utils__ = {{ util_exp|default("require('jinjs/lib/utils')") }};
 var __get_template__ = {{ require_exp|default("require") }};
-var fname = null, filter = null;
 var __last_ctx__ = null;
 
-for (fname in __utils__) {
-    eval("var " + fname + " = __utils__." + fname + ";");
-}
+var __indexOf = [].indexOf || function(x) {
+    for (var i = this.length - 1; i >= 0; i--)
+        if (this[i] === x) return i;
+};
 
-for (filter in __filter__) {
-    eval("var __filter_" + filter + " = __filter__['" + filter + "'];");
-}
+{% for fname, fn in utils %}{{ fn }}{% endfor %}
+
+{% for fn_name, decl in filters_used -%}
+{{ decl }}
+{% endfor %}
 
 {% if blocks %}
 // Start Block Definitions

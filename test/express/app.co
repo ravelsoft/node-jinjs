@@ -36,7 +36,7 @@ equal = (var1, var2) ->
     filter = (s) -> return '"' + (s.replace /\n/g, "\\n" .replace /\t/g, "\\t") + '"'
     _equal filter(var1), filter(var2)
 
-get = function (path, cbk) ->
+get = function (path, cbk)
     req = request (host: \localhost, port: 4000, path: path, method: \GET), (res) ->
         # equal 200, res.statusCode
         res.setEncoding \utf-8
@@ -52,7 +52,7 @@ get = function (path, cbk) ->
     req.end()
     return
 
-testreq = function (path, cbk) ->
+testreq = function (path, cbk)
     return do
         topic: ->
             get path, @callback

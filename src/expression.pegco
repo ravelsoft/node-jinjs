@@ -1,6 +1,8 @@
 
 ->
     compilation_ctx = arguments[2] ? {}
+    compilation_ctx.filters ?= {}
+    compilation_ctx.filters_used ?= {}
 
     make_filter = (expression, filters) ->
         res = expression
@@ -9,7 +11,9 @@
             args = ", #{f.args}" if f.args
 
             res = "#{f.name}(#{res}#{args})"
+
         return res
+
     # Tokens we don't want to encounter as variables
     reserved_words = [ "abstract", "as", "boolean", "break", "byte", "case", "catch", "char", "class", "continue", "const", "debugger", "default", "delete", "do", "double", "else", "enum", "export", "extends", "false", "final", "finally", "float", "for", "function", "goto", "if", "implements", "import", "in", "instanceof", "int", "interface", "is", "long", "namespace", "native", "new", "null", "package", "private", "protected", "public", "return", "short", "static", "switch", "synchronized", "this", "throw", "throws", "transient", "true", "try", "typeof", "use", "var", "void", "volatile", "while", "with" ]
     reserved_and_prefixed = [ "super" ]
@@ -136,7 +140,22 @@ primary_identifier
 /* Used for filters 
 */
 filter_name
-    = ident:filter_identifier -> return "__filter_#{ident}" 
+    = ident:filter_identifier ->
+        ident = \$ + ident
+        filters = compilation_ctx.filters
+
+        if not filters[ident]
+            throw new Error "No such filter: #ident"
+
+        if filters[ident].alias
+            ident = filters[ident].alias
+
+        for id of filters[ident].dependencies ? []
+            compilation_ctx.filters_used[id] = filters[id]
+
+        compilation_ctx.filters_used[ident] = filters[ident]
+        return ident
+
 filter_identifier
     = first:[_a-zA-Z] next:[_a-zA-Z0-9]* -> return "#{first}#{if next then next.join "" else ""}"
 

@@ -1,29 +1,14 @@
-
-_pad = (v) ->
-    if v < 10
-        return "0#v"
-    return v
-
-_unicode = (s) ->
-    s = s.charCodeAt 0 .toString 16
-    return "\\u" + ("0" * (4 - s.length)) + s
-
-_resolve_attr = (obj, att) ->
-    attrs = att.split \.
-    for a of attrs
-        obj = obj[a]
-    return obj
-
-_word_boundary = /\B/
-
-_url_re = //  ([a-z]+:\/\/\w([-\w\.]+)*|\w+(\.\w+)+)(:\d+)?(\/([\w\/_\.]*(\?\S+)?)?)?   //g
+/**
+    BEWARE : In this module, you can't have any require() out of the functions, nor
+    can you use all of coco's shortcuts : all of these are meant to be used with .toString() !
+**/
 
 exports import do
 
     /**
      * Return the absolute value of the argument.
      */
-    abs: function (num)
+    $abs: function (num)
         return -num if num < 0
         num
 
@@ -32,7 +17,7 @@ exports import do
      * It returns a list of lists with the given number of items. 
      * If you provide a second parameter this is used to fill missing items.
      */
-    batch: function (value, linecount, fill_with ? null)
+    $batch: function (value, linecount, fill_with ? null)
         result = []
         for i from 0 to value.length - 1 by linecount
             tmpres = []
@@ -50,27 +35,33 @@ exports import do
     /**
      *  Capitalize a string.
      */
-    capitalize: function (str)
+    $capitalize: function (str)
         return str.charAt(0).toUpperCase! + str.slice(1).toLowerCase!
 
     /**
      *  Center monospaced text.
      */
-    center: function (value, width ? 80)
+    $center: function (value, width ? 80)
         # No need to change anything.
         return value if value.length >= width - 1
 
-        leading = " " * ((width - value.length) / 2)
+        leading = $repeat(" ", (width - value.length) / 2)
+
         return leading + value
 
-    count: function 
+    $count: function 
         return exports.length ...
 
     /**
      *  Formats a date.
      *  TODO : not completely done.
      */
-    date: function (d, format)
+    $date: function (d, format)
+        _pad = (v) ->
+            if v < 10
+                return "0#v"
+            return v
+
         return format.replace /%[%cdfHIjmMpSUwWxXyYzZ]/g, (s) ->
             switch s.1
             case \c
@@ -129,7 +120,7 @@ exports import do
     /**
      *  Alias for default.
      */
-    d: function
+    $d: function
         return exports.\default ...
 
     /**
@@ -137,14 +128,14 @@ exports import do
      *  @param default_value: The value to return
      *      when `value` is null.
      */
-    default: function (value, default_value)
+    $default: function (value, default_value)
         return default_value if not value?
         value
 
     /**
      *  Return a list with 
      */
-    dictsort: function (value, case_sensitive ? false, _by ? 'key')
+    $dictsort: function (value, case_sensitive ? false, _by ? 'key')
         result = []
 
         for k, v in value
@@ -167,14 +158,10 @@ exports import do
 
 
         return result
+    
+    $e: alias: "$escape"
 
-    /**
-     *  Alias to escape
-     */
-    e: function
-        return exports.escape ...
-
-    escape: function (value)
+    $escape: function (value)
         return value.replace /&/g, '&amp;'
             .replace /</g, '&lt;'
             .replace />/g, '&gt;'
@@ -184,14 +171,18 @@ exports import do
     /**
      *  Escape a string to make it Javascript/JSON compliant.
      */
-    escapejs: function (value)
+    $escapejs: function (value)
+        _unicode = (s) ->
+            s = s.charCodeAt 0 .toString 16
+            return "\\u" + $repeat("0", (4 - s.length)) + s
+
         return value.replace /./g, (s) ->
             if \a <= s <= \z or \A <= s <= \Z or \0 <= s <= \9
                 # regular character, just return it.
                 return s
             return _unicode s   
 
-    filesizeformat: function (value)
+    $filesizeformat: function (value)
         if value < 1024
             return "#{value}"
         if value < 1024 * 1024
@@ -207,83 +198,89 @@ exports import do
         strval = "#{Math.round val}"
         return "#{val.toPrecision strval.length + 3}Kb"
 
-    first: function (arr)
+    $first: function (arr)
         return arr?[0]
 
-    float: function (value)
+    $float: function (value)
         res = parseFloat value
         return 0.0 if res is NaN
         return res
 
-    forceescape: function (value)
+    $forceescape: function (value)
         throw new Error \unimplemented
 
-    format: function (value, args ? [], kwargs ? {})
+    $format: function (value, args ? [], kwargs ? {})
         throw new Error \unimplemented
 
     /**
      *  NOTE: only usable in the {% for grouper, list %} notation.
      *  @param attribute: The attribute to group by.
      */
-    groupby: function (arr, attribute)
+    $groupby: function (arr, attribute)
         # FIXME : Chain objects in array that have the same attribute.
         result = {}
 
         for obj of arr
-            grouper = _resolve_attr obj, attribute
+            grouper = $resolve_attr obj, attribute
 
             result[grouper] ?= []
             result[grouper].push obj
 
         return result
 
-    in: function (obj, arr)
+    $in: function (obj, arr)
         x = null
         for x in arr
             if arr.hasOwnProperty (x) and obj is arr[x]
                 return true
         return false
 
-    indent: function (value, width ? 4, indentfirst ? false)
+    $indent: function (value, width ? 4, indentfirst ? false)
         first = true
 
         return value.replace /^/gm, (s) ->
             if not first or indentfirst
-                return "" + (" " * width) + s
+                return $repeat(" ", width) + s
             first := false
             return s
         
 
-    join: function (arr, string ? "", attribute ? null)
+    $join: function (arr, string ? "", attribute ? null)
         if arr?.length > 0
             if attribute
-                arr = (_resolve_attr o, attribute .toString! for o of arr)
+                arr = ($resolve_attr o, attribute .toString! for o of arr)
             return arr.join string
         return ""
 
-    last: function (arr)
+    $last: function (arr)
         return null if not arr?.length
         arr[arr.length - 1]
 
-    length: function (arr)
+    $length: function (arr)
         if not arr?
             return 0
         arr.length
 
-    lower: function (value)
+    $lower: function (value)
         value.toString!.toLowerCase ()
 
-    pprint: function (value, verbose ? false)
+    $pprint: function (value, verbose ? false)
         # FIXME
         throw new Error \unimplemented
 
-    random: function (list)
+    $random: function (list)
         if list?.length > 0
             index = Math.floor Math.random! * (list.length - 1) + 1
             return list[index]
         return ""
 
-    replace: function (string, regexp, newvalue, count ? null)
+    $repeat: function (str, n)
+        r = ''
+        for i from 0 to n - 1
+            r += str
+        return r
+
+    $replace: function (string, regexp, newvalue, count ? null)
         if typeof regexp is \string
             regexp = new RegExp regexp, \g
 
@@ -295,12 +292,18 @@ exports import do
                 count := count - 1
             return s.replace regexp, newvalue
 
-    reverse: function (arr)
+    $resolve_attr: function (obj, att)
+        attrs = att.split \.
+        for a of attrs
+            obj = obj[a]
+        return obj
+
+    $reverse: function (arr)
         new_arr = arr.splice 0
         new_arr.reverse()
         return new_arr
 
-    round: function (value, precision ? 0, method ? 'common')
+    $round: function (value, precision ? 0, method ? 'common')
         if method is \common
             return value.toFixed precision
         else
@@ -313,10 +316,10 @@ exports import do
                 value = Math.ceil value
             return (value / factor).toFixed precision
 
-    safe: function (value)
+    $safe: function (value)
         throw new Error "Escaping is not yet implemented"
 
-    slice: function (value, slices, fill_with ? null)
+    $slice: function (value, slices, fill_with ? null)
         result = []
 
         slice_length = Math.ceil value.length / slices
@@ -335,13 +338,13 @@ exports import do
             result.push tmpres
         return result
 
-    sort: function (value, reverse ? false, case_sensitive ? false, attribute ? null)
+    $sort: function (value, reverse ? false, case_sensitive ? false, attribute ? null)
         new_arr = value.splice 0
 
         new_arr.sort (a, b) ->
             if attribute
-                a = _resolve_attr a, attribute
-                b = _resolve_attr b, attribute
+                a = $resolve_attr a, attribute
+                b = $resolve_attr b, attribute
             if not case_sensitive
                 a = a.toString!.toUpperCase!
                 b = b.toString!.toUpperCase!
@@ -352,10 +355,10 @@ exports import do
         new_arr.reverse! if reverse
         return new_arr
 
-    string: function (s)
+    $string: function (s)
         return s.toString!
 
-    striptags: function (val)
+    $striptags: function (val)
         return val.replace //<(
                 '(\'|[^'])*'
             |   "(\"|[^"])*"
@@ -363,30 +366,30 @@ exports import do
             )+>
             //g, ''
 
-    sum: function (container, attribute ? null, start ? 0)
+    $sum: function (container, attribute ? null, start ? 0)
         res = 0
 
         for o of container
             if attribute
-                res += _resolve_attr o, attribute
+                res += $resolve_attr o, attribute
             else
                 res += o
 
         return res + start
         
 
-    title: function (s)
-        return (exports.capitalize o for o of s.split(/\s/)).join " "
+    $title: function (s)
+        return ($capitalize o for o of s.split(/\s/)).join " "
         
 
-    trim: function (value)
+    $trim: function (value)
         value?.trim() ? ""
 
-    truncate: function (s, length ? 255, killwords ? false, ellipsis ? \...)
+    $truncate: function (s, length ? 255, killwords ? false, ellipsis ? \...)
         end = length - 1
 
         if end < s.length and not killwords
-            while end + 1 < s.length and not _word_boundary.test s[end + 1]
+            while end + 1 < s.length and not /\B/.test s[end + 1]
                 end += 1
 
         if end == s.length - 1 # there was no truncating
@@ -394,12 +397,12 @@ exports import do
 
         return (s.slice 0, end + 1) + ellipsis
 
-    upper: function (value)
+    $upper: function (value)
         value.toString!.toUpperCase ()
 
-    urlize: function (value, trim_url_limit ? null, nofollow ? false)
+    $urlize: function (value, trim_url_limit ? null, nofollow ? false)
         
-        return value.replace _url_re, (u) ->
+        return value.replace //  ([a-z]+:\/\/\w([-\w\.]+)*|\w+(\.\w+)+)(:\d+)?(\/([\w\/_\.]*(\?\S+)?)?)?   //g, (u) ->
             if trim_url_limit?
                 trimmed_u = u.slice 0, trim_url_limit
                 if trimmed_u.length < u.length
@@ -409,7 +412,7 @@ exports import do
 
             return "<a href=\"#u\"#{if nofollow then " rel=\"nofollow\"" else ""}>#trimmed_u</a>"
 
-    wordwrap: function (s, width ? 79, break_long_words ? true)
+    $wordwrap: function (s, width ? 79, break_long_words ? true)
         res = []
         actual = ""
         sp = /^\s+$/ # spaces are ignored at the end of line.
@@ -432,10 +435,19 @@ exports import do
         res.push actual
         return res.join "\n"
 
-    xmlattr: function (d, autospace ? true)
-        res = []
-        for k, v in d
-            if v?
-                res.push "#{if autospace then " " else ""}#k=\"#{exports.e v.toString!}\""
-        return res.join ""
+    $xmlattr: function (d, autospace ? true)
+            res = []
+            for k, v in d
+                if v?
+                    res.push "#{if autospace then " " else ""}#k=\"#{$escape v.toString!}\""
+            return res.join ""
 
+exports[\$center].dependencies = [\$repeat]
+exports[\$escapejs].dependencies = [\$repeat]
+exports[\$groupby].dependencies = [\$resolve_attr]
+exports[\$indent].dependencies = [\$repeat]
+exports[\$join].dependencies = [\$resolve_attr]
+exports[\$sort].dependencies = [\$resolve_attr]
+exports[\$sum].dependencies = [\$resolve_attr]
+exports[\$title].dependencies = [\$capitalize]
+exports[\$xmlattr].dependencies = [\$escape]
