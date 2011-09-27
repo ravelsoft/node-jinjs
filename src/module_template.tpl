@@ -6,9 +6,17 @@ var __indexOf = [].indexOf || function(x) {
         if (this[i] === x) return i;
 };
 
+if (!Object.keys) Object.keys = function(o){
+ if (o !== Object(o))
+      throw new TypeError('Object.keys called on non-object');
+ var ret=[],p;
+ for(p in o) if(Object.prototype.hasOwnProperty.call(o,p)) ret.push(p);
+ return ret;
+}
+
 {% for fname, fn in utils %}{{ fn }}{% endfor %}
 
-{% for fn_name, decl in filters_used -%}
+{% for fn_name, decl in filters_used %}
 {{ decl }}
 {% endfor %}
 
@@ -18,9 +26,9 @@ var __indexOf = [].indexOf || function(x) {
 {% for name, contents in blocks %}
 // Block declaration of "{{ name }}"
 function __block_{{ name }} (__ctx__) {
-    var _super = this._super || function(){return "";};
     var _b = (__ctx__ ? __ctx__.__blocks__ : {});
     var _res = "";
+    var __extends__ = null;
     {{ contents }}
     return _res;
 }

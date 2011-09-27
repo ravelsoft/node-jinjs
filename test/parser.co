@@ -167,6 +167,18 @@ suite.addBatch do
             res = _parse "{% for key in ['hello'] %}{{ key }}{% else %}empty{% endfor %}"
             equal res.txt, 'hello'
 
+        "Has a continue clause": ->
+            res = _parse "{% for key in ['hello', 'world'] %}{% continue %}{{ key }}{% else %}empty{% endfor %}"
+            equal res.txt, ''
+
+        "Has a break clause": ->
+            res = _parse "{% for key in ['hello', 'world'] %}{{ key }}{% break %}{% else %}empty{% endfor %}"
+            equal res.txt, 'hello'
+
+        "Has a break clause that can be nested in {% if %}": ->
+            res = _parse "{% for key in ['hello', 'world'] %}{{ key }}{% if 0 == 0 %}{% break %}{% endif %}{% else %}empty{% endfor %}"
+            equal res.txt, 'hello'
+
 
         # Should investigate the whole "callee thing"
         # "can be called recursively": ->

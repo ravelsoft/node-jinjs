@@ -16,7 +16,6 @@
 
     # Tokens we don't want to encounter as variables
     reserved_words = [ "abstract", "as", "boolean", "break", "byte", "case", "catch", "char", "class", "continue", "const", "debugger", "default", "delete", "do", "double", "else", "enum", "export", "extends", "false", "final", "finally", "float", "for", "function", "goto", "if", "implements", "import", "in", "instanceof", "int", "interface", "is", "long", "namespace", "native", "new", "null", "package", "private", "protected", "public", "return", "short", "static", "switch", "synchronized", "this", "throw", "throws", "transient", "true", "try", "typeof", "use", "var", "void", "volatile", "while", "with" ]
-    reserved_and_prefixed = [ "super" ]
 
 expression
     = space? t:ternary_operator space? -> 
@@ -128,14 +127,11 @@ identifier
         ident = "#{first}#{if rest then rest.join "" else ""}"
         if ident of reserved_words
             throw new Error "can't use '#{ident}' as a variable name"
-        if ident of reserved_and_prefixed
-            return "_#{ident}"
         return ident
 
 /* Used for any variable of function name */
 primary_identifier
-    = ident:identifier -> return if ident in compilation_ctx then "#{ident}" else "__ctx__.#{ident}" 
-
+    = ident:identifier -> return "__ctx__.#{ident}"
 
 /* Used for filters 
 */

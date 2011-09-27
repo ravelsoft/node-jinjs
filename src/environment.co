@@ -30,7 +30,7 @@ class Environment
         ast = @parser.parse str, compilation_ctx
         opts = {__indent__: 1, @utils, @filters}
 
-        compilation_ctx = filters_used: [], utils_used: [] 
+        compilation_ctx = filters_used: [], utils_used: []
         compilation_ctx <<< {@filters, @utils}
         body = ast.compile opts, compilation_ctx
 
