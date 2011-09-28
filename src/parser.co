@@ -1,4 +1,3 @@
-sys = require \sys
 { Lexer } = require \./lexer
 { NodeComment, NodeList, NodePrint, default_nodes } = require \./nodes
 
