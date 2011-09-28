@@ -127,6 +127,10 @@ suite.addBatch do
             res = _parse "{% for val in [4, 5, 4] %}{{ loop.index0 }}{% endfor %}"
             equal res.txt, '012'
             
+        "Gives the index0 in the second variable if specified": ->
+            res = _parse "{% for val, ind in [4, 5, 4] %}{{ ind }}{% endfor %}"
+            equal res.txt, '012'
+            
         "has a {{ loop.index }} variable": ->
             res = _parse "{% for val in [4, 5, 4] %}{{ loop.index }}{% endfor %}"
             equal res.txt, '123'
