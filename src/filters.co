@@ -264,9 +264,151 @@ exports import do
     $lower: function (value)
         value.toString!.toLowerCase ()
 
-    $pprint: function (value, verbose ? false)
-        # FIXME
-        throw new Error \unimplemented
+    $pprint_: function (node, fmter)
+
+        met = []
+        
+        function real_pprint (node, fmter)
+            if node instanceof Function
+                fmter \function, node
+            else if node instanceof RegExp
+                fmter \regexp, node
+            else if node instanceof Object
+                if (met.indexOf node) != -1
+                    fmter \obj-already, node
+                    return
+
+                met.push node
+
+                is_array = node instanceof Array
+                fmter \obj-pre, is_array
+
+                props = []
+                for k, v in node
+                    if node.hasOwnProperty k
+                        if v instanceof String
+                            console.log v
+                        props.push lbl: k, node: v
+
+                props.sort (a, b) ->
+                    if a < b then return -1
+                    if a > b then return 1
+                    return 0
+
+                for prop, i of props
+                    if i != 0
+                        fmter \obj-sep
+                    
+                    if not is_array
+                        fmter \obj-label, prop.lbl
+                    real_pprint prop.node, fmter
+
+                fmter \obj-post, node instanceof Array
+
+            else if node instanceof String or typeof node is \string
+                fmter \string, node
+            else if node instanceof Number or typeof node is \number
+                fmter \number, node
+            else if node instanceof Boolean or typeof node is \boolean
+                fmter \boolean, node
+            else if not node?
+                fmter \empty
+
+        return real_pprint node, fmter
+
+    $pprint: function (value, verbose ? false, depth ? 0)
+        res = []
+
+        $pprint_ value, (type, node) ->
+
+            switch type
+            case \obj-pre
+                res.push if node then "[ " else "{ "
+            case \obj-post
+                res.push if node then " ]" else " }"
+            case \obj-already
+                res.push "[cycle]"
+            case \obj-sep
+                res.push ", "
+            case \obj-label
+                res.push "#node: "
+            case \string
+                res.push "\"#node\""
+            case \number
+                res.push "#node"
+            case \regexp
+                res.push "/#node/"
+            case \function
+                res.push "[function]"
+            case \boolean
+                res.push "#node"
+            case \empty
+                res.push "\u2205"
+            default
+                res.push node
+
+        return res.join ""
+                
+    $hprint: function (value, verbose ? false, depth ? 0)
+        res = []
+        cur_depth = 0
+        res.push "<span class='hprint-value'>"
+
+        fmt = function (val, type, color, morestyle ? "")
+            return "<span class='hprint-#type' style='color:#color;#morestyle'>#val</span>"
+
+        $pprint_ value, (type, node) ->
+            if type is \obj-pre
+                cur_depth := cur_depth + 1
+            if type is \obj-post
+                cur_depth := cur_depth - 1
+
+            if depth > 0 and cur_depth >= depth
+                return
+
+            switch type
+            case \obj-pre
+                res.push fmt (if node then "[ " else "{ "), \open, \gray, "font-weight: bold;"
+                res.push "<span class='hprint-object hprint-depth-#cur_depth'>"
+
+            case \obj-post
+                res.push "</span>"
+                res.push fmt (if node then " ]" else " }"), \close, \gray, "font-weight: bold;"
+
+            case \obj-already
+                res.push fmt "[cycle]", \cycle, \cyan
+
+            case \obj-sep
+                res.push ", "
+
+            case \obj-label
+                res.push "<span class='hprint-label'>#node: </span>"
+
+            case \string
+                res.push fmt "\"#{$escape node}\"", \string, \goldenrod
+
+            case \number
+                res.push fmt "#node", \number, \magenta
+
+            case \regexp
+                res.push fmt "#{$escape node.toString!}", \regexp, \lightgreen
+
+            case \function
+                res.push fmt "[function]", \function, \salmon
+
+            case \boolean
+                res.push fmt "#node", \boolean, \magenta
+
+            case \empty
+                res.push fmt "\u2205", \empty, \magenta
+
+            default
+                res.push node
+
+        res.push "</span>"
+
+        return res.join ""
+
 
     $random: function (list)
         if list?.length > 0
@@ -451,3 +593,5 @@ exports[\$sort].dependencies = [\$resolve_attr]
 exports[\$sum].dependencies = [\$resolve_attr]
 exports[\$title].dependencies = [\$capitalize]
 exports[\$xmlattr].dependencies = [\$escape]
+exports[\$pprint].dependencies = [\$pprint_, \$escape]
+exports[\$hprint].dependencies = [\$pprint_, \$escape]
