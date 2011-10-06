@@ -165,8 +165,8 @@ exports import do
         return value.replace /&/g, '&amp;'
             .replace /</g, '&lt;'
             .replace />/g, '&gt;'
-            .replace /'/g, '&squot;'
-            .replace /"/g, '&dquot;'
+            .replace /'/g, '&apos;'
+            .replace /"/g, '&quot;'
 
     /**
      *  Escape a string to make it Javascript/JSON compliant.
