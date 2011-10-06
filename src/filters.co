@@ -266,22 +266,22 @@ exports import do
 
     $pprint_: function (node, fmter)
 
-        met = []
-        
-        function real_pprint (node, fmter)
+        function real_pprint (node, fmter, met ? [])
             if node instanceof Function
                 fmter \function, node
             else if node instanceof RegExp
                 fmter \regexp, node
             else if node instanceof Object
-                if (met.indexOf node) != -1
-                    fmter \obj-already, node
+                index = met.indexOf node
+                if index != -1
+                    fmter \obj-already, index
                     return
 
                 met.push node
+                index = met.length - 1
 
                 is_array = node instanceof Array
-                fmter \obj-pre, is_array
+                fmter \obj-pre, is_array, index
 
                 props = []
                 for k, v in node
@@ -301,7 +301,7 @@ exports import do
                     
                     if not is_array
                         fmter \obj-label, prop.lbl
-                    real_pprint prop.node, fmter
+                    real_pprint prop.node, fmter, met
 
                 fmter \obj-post, node instanceof Array
 
@@ -350,6 +350,7 @@ exports import do
         return res.join ""
                 
     $hprint: function (value, verbose ? false, depth ? 0)
+        unique = "hprint-" + Date.now!
         res = []
         cur_depth = 0
         res.push "<span class='hprint-value'>"
@@ -357,7 +358,7 @@ exports import do
         fmt = function (val, type, color, morestyle ? "")
             return "<span class='hprint-#type' style='color:#color;#morestyle'>#val</span>"
 
-        $pprint_ value, (type, node) ->
+        $pprint_ value, (type, node, index) ->
             if type is \obj-pre
                 cur_depth := cur_depth + 1
             if type is \obj-post
@@ -369,14 +370,14 @@ exports import do
             switch type
             case \obj-pre
                 res.push fmt (if node then "[ " else "{ "), \open, \gray, "font-weight: bold;"
-                res.push "<span class='hprint-object hprint-depth-#cur_depth'>"
+                res.push "<span id='#unique-#index' class='hprint-object hprint-depth-#cur_depth'>"
 
             case \obj-post
                 res.push "</span>"
                 res.push fmt (if node then " ]" else " }"), \close, \gray, "font-weight: bold;"
 
             case \obj-already
-                res.push fmt "[cycle]", \cycle, \cyan
+                res.push fmt "<a href='\##unique-#node'>[cycle]</a>", \cycle, \cyan
 
             case \obj-sep
                 res.push ", "
