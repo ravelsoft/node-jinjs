@@ -24,8 +24,8 @@
         "optimist": "0.2.3"
      },
      "devDependencies" : {
-        "pegjs": "0.6.x",
+        "pegco": "0.0.1",
         "coco": "0.6.x",
-        "inotify": "latest"
+        "vows": "latest"
      }
 }

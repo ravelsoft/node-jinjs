@@ -16,7 +16,7 @@ optimist = require "optimist"
 argv = optimist.argv
 
 fs = require "fs"
-sys = require "sys"
+sys = require "util"
 { defaultEnvironment } = require "./environment"
 
 # If help, show it then exit.

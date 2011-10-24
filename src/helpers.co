@@ -21,3 +21,4 @@ function registerExtension (ext, filter)
 # registerExtension \.pwx, (str) -> pwilang.parse str
 
 exports import { registerExtension }
+
