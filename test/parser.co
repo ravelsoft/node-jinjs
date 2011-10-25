@@ -232,7 +232,7 @@ suite.addBatch do
             equaltxt "{{ {'C': 1, 'b': 3, 'a': 2}|dictsort(true) }}", 'C,1,a,2,b,3'
 
         "`escape` or `e` escape an HTML string": ->
-            equaltxt "{{ '<a href=\"#\" title=\\'\\'>&amp;</a>'|e }}", '&lt;a href=&dquot;#&dquot; title=&squot;&squot;&gt;&amp;amp;&lt;/a&gt;'
+            equaltxt "{{ '<a href=\"#\" title=\\'\\'>&amp;</a>'|e }}", '&lt;a href=&quot;#&quot; title=&apos;&apos;&gt;&amp;amp;&lt;/a&gt;'
 
         "`escapejs` escape a string to make it javascript/or JSON safe": ->
             equaltxt "{{ 'a\"b\\'<{}'|escapejs }}", 'a\\u0022b\\u0027\\u003c\\u007b\\u007d'

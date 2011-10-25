@@ -1,4 +1,8 @@
-var __get_template__ = {{ require_exp|default("require") }};
+var _require = function (mod) { 
+    if ((typeof mod === "object") && (mod.render != null))
+        return mod;
+    return {{require_exp|default("require")}}(mod);
+};
 var __last_ctx__ = null;
 
 var __indexOf = [].indexOf || function(x) {
@@ -26,6 +30,7 @@ if (!Object.keys) Object.keys = function(o){
 {% for name, contents in blocks %}
 // Block declaration of "{{ name }}"
 function __block_{{ name }} ($$) {
+    var require = _require;
     var _b = ($$ ? $$.__blocks__ : {});
     var _res = "";
     var __extends__ = null;
@@ -43,6 +48,7 @@ function render ($$) {
     var _res = '';
     var _i = 0;
     var __extends__ = null;
+    var require = _require;
     {% if blocks %}
     var _b = null;
     ($$.__blocks__ == null) && ($$.__blocks__ = {});

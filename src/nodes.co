@@ -133,7 +133,7 @@ class NodeExtends extends NodeTag
         opts.'extends' = true
         tpl_name = parse_extends @contents, opts
         if template_expr_is_string tpl_name
-            return "#{@cur opts}__extends__ = __get_template__ (#{tpl_name});"
+            return "#{@cur opts}__extends__ = require(#{tpl_name});"
         else
             return "#{@cur opts}__extends__ = #{tpl_name}; 
                 #{@cur opts}if (__extends__ === null || __extends__ === undefined) throw new Error ('Cant extend a null template.');"
@@ -150,7 +150,7 @@ class NodeImport extends NodeTag
         result = "#{@cur opts}(function(){ 
                 #{@ind opts}var __new_ctx = #{if not with_context then '{}' else '__import({}, $$)'};
                 // __new_ctx now gets populated with the new exported variables.
-                #{@cur opts}__get_template__(#{tpl}).render(__new_ctx);
+                #{@cur opts}require(#{tpl}).render(__new_ctx);
             "
 
         if as # Importing the whole module.
@@ -184,7 +184,7 @@ class NodeInclude extends NodeTag
         tpl_name = parse_extends @contents, opts
 
         if template_expr_is_string tpl_name
-            tpl_exp = "__get_template__(#{tpl_name})"
+            tpl_exp = "require(#{tpl_name})"
         else
             tpl_exp = tpl_name
 
@@ -200,7 +200,7 @@ class NodeImport extends NodeTag
         opts.\clone = true # We're going to need the clone function
 
         if template_expr_is_string template
-            tpl_exp = "__get_template__(#{template})"
+            tpl_exp = "require(#{template})"
         else
             tpl_exp = template
 
@@ -238,7 +238,7 @@ class NodeAbspath extends NodeTag
     (specs) -> super ...
     compile: function (opts, ctx)
         path = parse_string @contents, ctx
-        return "#{@cur opts}_res += require('path').join(__dirname, #{path});"
+        return "#{@cur opts}_res += _require('path').join(__dirname, #{path});"
 /**
  *
  */
