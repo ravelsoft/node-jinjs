@@ -52,7 +52,7 @@ class BasicFileEnvironment extends Environment
      *  Constructor.
      */
     (specs) -> 
-        specs <<< require_exp: "_require"
+        specs <<< require_exp: "__load_template"
         super ...
 
         @cache = {}
