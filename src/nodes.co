@@ -12,7 +12,7 @@ parse_block = make_parse_rule \tag_block
 parse_import = make_parse_rule \tag_import
 parse_string = make_parse_rule \string
 
-function trim (string) 
+function trim (string)
     return if not string then "" else string.replace(/^\s*|\s*$/, '')
 
 /**
@@ -62,7 +62,7 @@ class NodeBasic extends Node
     (specs) -> super ...
 
     compile: function (opts, ctx)
-        "#{@cur opts}_res += '#{escape @contents}';"
+        "_res += '#{escape @contents}';"
 
     append: function (contents)
         @contents += contents
@@ -71,7 +71,7 @@ class NodeComment extends Node
     ({ @contents ? "" }) ->
 
     compile: function (opts, ctx)
-        "#{@cur opts}/*#{@contents}*/"
+        "/*#{@contents}*/"
 
 /**
  *  A collection of Nodes.
@@ -93,7 +93,7 @@ class NodeList extends Node
                 @nodes.push new NodeBasic contents: node
         else
             @nodes.push node
-        
+
     compile: function (opts, ctx)
         ctx ?= {}
         res = ""
@@ -108,7 +108,7 @@ class NodePrint extends Node
     (specs) -> super ...
 
     compile: function (opts, ctx)
-        return "#{@cur opts}_res += ((_ref = #{make_expression @contents, ctx}) !== undefined && _ref !== null ? _ref : '').toString();"
+        return "_res += ((_ref = #{make_expression @contents, ctx}) !== undefined && _ref !== null ? _ref : '').toString();"
 
 class NodeTag extends Node
     @tag = \__tag__
@@ -133,10 +133,10 @@ class NodeExtends extends NodeTag
         opts.'extends' = true
         tpl_name = parse_extends @contents, opts
         if template_expr_is_string tpl_name
-            return "#{@cur opts}__extends__ = require(#{tpl_name});"
+            return "__extends__ = require(#{tpl_name});"
         else
-            return "#{@cur opts}__extends__ = #{tpl_name}; 
-                #{@cur opts}if (__extends__ === null || __extends__ === undefined) throw new Error ('Cant extend a null template.');"
+            return """__extends__ = #{tpl_name};
+                if (__extends__ === null || __extends__ === undefined) throw new Error ('Cant extend a null template.');"""
 
 class NodeImport extends NodeTag
     @tag = \import
@@ -147,25 +147,25 @@ class NodeImport extends NodeTag
 
         opts.\clone = true # We're going to need the clone function
 
-        result = "#{@cur opts}(function(){ 
-                #{@ind opts}var __new_ctx = #{if not with_context then '{}' else '__import({}, $$)'};
+        result = """(function(){
+                var __new_ctx = #{if not with_context then '{}' else '__import({}, $$)'};
                 // __new_ctx now gets populated with the new exported variables.
-                #{@cur opts}require(#{tpl}).render(__new_ctx);
-            "
+                require(#{tpl}).render(__new_ctx);
+            """
 
         if as # Importing the whole module.
-            result += "#{common}#{@cur opts}$$.#{as} = __new_ctx;
+            result += "#{common}$$.#{as} = __new_ctx;
             "
 
         else # List of imported elements from the context.
-            result += "#{@cur opts}var names = ['#{imports.join "', '"}'];
-                #{@cur opts}for (var i = 0; i < names.length; i++) {
-                    #{@ind opts}$$[names[i]] = __new_ctx[names[i]];
-                #{@ded opts}}
-            "
+            result += """var names = ['#{imports.join "', '"}'];
+                for (var i = 0; i < names.length; i++) {
+                    $$[names[i]] = __new_ctx[names[i]];
+                }
+            """
 
-            
-        result += "#{@ded opts}})();"
+
+        result += "})();"
         return result
 
 class NodeFromImport extends NodeImport
@@ -188,7 +188,7 @@ class NodeInclude extends NodeTag
         else
             tpl_exp = tpl_name
 
-        return "#{@cur opts}_res += (#{tpl_exp}).render($$);"
+        return "_res += (#{tpl_exp}).render($$);"
 
 class NodeImport extends NodeTag
     @tag = \import
@@ -204,29 +204,29 @@ class NodeImport extends NodeTag
         else
             tpl_exp = template
 
-        result = "#{@cur opts}(function(){ "
+        result = "(function(){ "
 
         if with_context
-            result += "#{@ind opts}var __new_ctx = __import({}, $$);
+            result += """var __new_ctx = __import({}, $$);
                 // __new_ctx now gets populated with the new exported variables.
-                #{@cur opts}(#{tpl_exp}).render(__new_ctx);
-            "
+                (#{tpl_exp}).render(__new_ctx);
+            """
         else
-            result += "#{@cur opts}var __new_ctx = (#{tpl_exp})._cached_ctx();"
+            result += "var __new_ctx = (#{tpl_exp})._cached_ctx();"
 
         if as_name # Importing the whole module.
-            result += "#{@cur opts}$$.#{as_name} = __new_ctx;
+            result += "$$.#{as_name} = __new_ctx;
             "
 
         else # List of imported elements from the context.
-            result += "#{@cur opts}var names = ['#{variables.join "', '"}'];
-                #{@cur opts}for (var i = 0; i < names.length; i++) {
-                    #{@ind opts}$$[names[i]] = __new_ctx[names[i]];
-                #{@ded opts}}
-            "
+            result += """var names = ['#{variables.join "', '"}'];
+                for (var i = 0; i < names.length; i++) {
+                    $$[names[i]] = __new_ctx[names[i]];
+                }
+            """
 
-            
-        result += "#{@ded opts}})();"
+
+        result += "})();"
         return result
 
 class NodeFromImport extends NodeImport
@@ -238,7 +238,7 @@ class NodeAbspath extends NodeTag
     (specs) -> super ...
     compile: function (opts, ctx)
         path = parse_string @contents, ctx
-        return "#{@cur opts}_res += _require('path').join(__dirname, #{path});"
+        return "_res += _require('path').join(__dirname, #{path});"
 /**
  *
  */
@@ -251,14 +251,14 @@ class NodeLet extends NodeTag
         { variable_name, expression } = parse_let @contents, ctx
 
         ctx[variable_name] = true # The variable name is now accessible to the rest of the template.
-        return res = "#{@cur opts}var #{variable_name} = ($$.#{variable_name} = #{expression});"
+        return res = "var #{variable_name} = ($$.#{variable_name} = #{expression});"
 
 class NodeDo extends NodeTag
     @tag = \do
     (specs) -> super ...
 
     compile: function (opts, ctx)
-        return "#{@cur opts}#{make_expression @contents, ctx};"
+        return "#{make_expression @contents, ctx};"
 
 /**
  */
@@ -268,7 +268,10 @@ class NodeTagContainer extends NodeList
         @child_node = specs.child_node
 
     child_code: function (opts, ctx)
-        return (@child_node?.compile opts, ctx) ? ""
+        ind = 0
+        return ((@child_node?.compile opts, ctx) ? "").replace /^/g, ->
+            ind := ind + 1
+            return if ind == 1 then "" else "    "
 
 /**
  *
@@ -283,10 +286,13 @@ class NodeMacro extends NodeTagContainer
         res = ""
         for a of args
             if a.default_value
-                res += "#{@cur opts}#{a.name} = (#{a.name} === undefined) ? (#{a.default_value}) : #{a.name};"
+                res += "#{a.name} = (#{a.name} === undefined) ? (#{a.default_value}) : #{a.name};"
 
     compile: function (opts, ctx)
         { args, function_name } = parse_macro @contents, ctx
+
+        # Add the last param, which is *always* the caller block.
+        args.push({name: "caller", default: "(function(){ return \"\"; })"})
 
         backup = []
         argcode = []
@@ -294,28 +300,53 @@ class NodeMacro extends NodeTagContainer
 
         for a of args
             backup.push "__#{a.name} = #{a.name}"
-            argcode.push "$$.#{a.name} = #{a.name}"
+            if a["default"]
+                argcode.push "$$.#{a.name} = #{a.name} || #{a["default"]}"
+            else
+                argcode.push "$$.#{a.name} = #{a.name}"
             argendcode.push "if (__#{a.name} !== undefined) $$.#{a.name} = __#{a.name};"
 
         if args
             backup = "var #{backup.join ","};"
             argcode = "#{argcode.join ","};"
             argendcode = argendcode.join " "
-            
 
-        res = "#{@cur opts}function #{function_name}(#{(a.name for a of args).join ", "}) {
-                    #{@ind opts}var _res = '';
+        res = """function #{function_name}(#{(a.name for a of args).join ", "}) {
+                    var _res = '';
                     #{@init_defaults opts, args}
-                    #{@cur opts}#backup
-                    #{@cur opts}#argcode
+                    #backup
+                    #argcode
                     #{@child_code opts, ctx}
-                    #{@cur opts}#argendcode
-                    #{@cur opts}return _res;
-                #{@ded opts}}
-                #{@cur opts}$$.#{function_name} = #{function_name};
-                "
+                    #argendcode
+                    return _res;
+                }
+                $$.#{function_name} = #{function_name};
+                """
         return res
 
+class NodeCall extends NodeTagContainer
+    @tag = \call
+    @until = \endcall
+    @call_re = /([a-zA-Z$_0-9]+)\s*\((.*)\)\s*/
+
+    (specs) -> super ...
+
+    compile: function (opts, ctx)
+        m = @contents.match(NodeCall.call_re)
+
+        contents = "function () {
+            var _res = '';
+            #{@child_code opts, ctx}
+            return _res;
+        }"
+
+        contents = """function () {
+            var _res = '';
+            #{@child_code opts, ctx}
+            return _res;
+        }"""
+        console.log(contents)
+        return ""
 /**
  *
  */
@@ -335,21 +366,22 @@ class NodeBlock extends NodeTagContainer
         opts.blocks[block_name] = "#{@child_code opts, ctx}"
         opts.__indent__ = indent
 
-        return "#{@cur opts}// Adding the current block as the super of the currently defined block with the same name.
-            #{@cur opts}if (_b['#{block_name}'] !== undefined) {
-            #{@ind opts}_b['#{block_name}'] = (function (original) {
-                #{@ind opts}return function ($$) { 
-                    var prevsuper = $$.super; 
-                    $$.super = function() { 
-                        return __block_#{block_name}($$); 
-                    }; 
-                    var res = original($$);
-                    if (prevsuper !== undefined) 
-                        $$.super = prevsuper; 
-                    return res; };
-            #{@ded opts}})(_b['#{block_name}']);
-        #{@ded opts}} else { _b['#{block_name}'] = __block_#{block_name}; }
-        #{@cur opts}if (__extends__ === null) _res += _b['#{block_name}']($$);"
+        return """// Adding the current block as the super of the currently defined block with the same name.
+            if (_b['#{block_name}'] !== undefined) {
+                _b['#{block_name}'] = (function (original) {
+                    return function ($$) {
+                        var prevsuper = $$.super;
+                        $$.super = function() {
+                            return __block_#{block_name}($$);
+                        };
+                        var res = original($$);
+                        if (prevsuper !== undefined)
+                            $$.super = prevsuper;
+                        return res; };
+                })(_b['#{block_name}']);
+            } else { _b['#{block_name}'] = __block_#{block_name}; }
+            if (__extends__ === null) _res += _b['#{block_name}']($$);\n
+        """
 
 
 
@@ -363,7 +395,7 @@ class NodeElse extends NodeTagContainer
         super ...
 
     compile: function (opts, ctx)
-        res = "#{@ded opts}} else {" 
+        res = "} else {"
         @ind opts
         res += "#{@child_code opts, ctx}"
         return res
@@ -379,7 +411,7 @@ class NodeElseIf extends NodeTagContainer
         if not trim @contents
             throw new Error "{% elseif <condition> %}: condition can't be empty."
 
-        res = "#{@ded opts}} else if (#{make_expression @contents, ctx}) {"
+        res = "} else if (#{make_expression @contents, ctx}) {"
         @ind opts
         res += "#{@child_code opts, ctx}"
         return res
@@ -396,10 +428,10 @@ class NodeIf extends NodeTagContainer
         if not trim @contents
             throw new Error "{% if <condition> %}: condition can't be empty."
 
-        res = "#{@cur opts}if (#{make_expression @contents, ctx}) {"
+        res = "if (#{make_expression @contents, ctx}) {"
         @ind opts
-        res += "#{@child_code opts, ctx}#{super this, opts, ctx}
-        #{@ded opts}}"
+        res += """#{@child_code opts, ctx}#{super this, opts, ctx}
+        }"""
         return res
 
 
@@ -412,7 +444,7 @@ class NodeElseFor extends NodeTagContainer
 
     compile: function (opts, ctx)
         # loop.index is not defined if we didn't enter the loop.
-        res = "#{@child_code opts, ctx}#{@ded opts}"
+        res = "#{@child_code opts, ctx}"
         return res
 
 
@@ -435,7 +467,7 @@ class NodeBreak extends NodeTag
         return "break;"
 
 #   A Node that emulates the for () { } statement.
-#  
+#
 class NodeFor extends NodeTagContainer
     @tag = \for
     @until = \endfor
@@ -456,10 +488,10 @@ class NodeFor extends NodeTagContainer
         v = if value then "$$['#value']" else "null"
         l = "$$.loop"
 
-        return "#{@cur opts}(function() {
+        return """(function() {
             var _fref = #condition || [], _prev_loop = #l, _prev_key = #k, _prev_value = #v, k = null, v = null, i = 0, l = 0, x = null, last_v = null, last_k = null;
             #l = { };
-            #{@cur opts}if (_fref instanceof Array) {
+            if (_fref instanceof Array) {
                 l = _fref.length;
                 for (i = 0; i < l; i++) {
                     #l.last = (i == l - 1);
@@ -469,10 +501,10 @@ class NodeFor extends NodeTagContainer
                     #k = _fref[i]; #{if value then "#v = i;" else ""}
                     #{@child_code opts, ctx}
                 }
-            #{@cur opts}} else {
+            } else {
                 #l = { first: true, last: false };
                 l = Object.keys(_fref).length;
-                
+
                 for (x in _fref) { if (_fref.hasOwnProperty(x)) {
                     #l.last = (i == l - 1);
                     #k = x;
@@ -484,17 +516,17 @@ class NodeFor extends NodeTagContainer
                     #l.first = false;
                 } }
             }
-            #{@cur opts}if (#l.index == undefined) {
+            if (#l.index == undefined) {
                 #{super this, opts, ctx}
             }
             #l = _prev_loop; #k = _prev_key; #{if value then "#v = _prev_value;" else ""}
             })();
-        "
+        """
 
-exports <<< { 
-    NodeIf, NodeDo, NodeLet, NodeFor, NodeMacro, NodeList, NodeBasic, 
+exports <<< {
+    NodeIf, NodeDo, NodeLet, NodeFor, NodeMacro, NodeList, NodeBasic,
     NodePrint, NodeComment, NodeExtends, NodeInclude, NodeImport, NodeFromImport,
-    NodeContinue
+    NodeContinue, NodeCall
     default_nodes: do
         \if : NodeIf
         \do : NodeDo
@@ -509,5 +541,6 @@ exports <<< {
         \abspath : NodeAbspath
         \continue : NodeContinue
         \break : NodeBreak
+        \call : NodeCall
     }
 

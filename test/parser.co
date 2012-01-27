@@ -415,7 +415,11 @@ suite.addBatch do
         "have arguments which default values are overriden when specified in the function call": ->
             res = _parse "{% macro test (a, b='Not World') %}{{ a }} {{ b }}.{% endmacro %}{{ test ('Hello', 'World') }}"
             equal res.txt, "Hello World."
-            
+
+    "The {% call %} tag": do
+        "Allows us to send additional, big content, to macros": ->
+            res = _parse "{% macro test () %}{{ caller() }} World.{% endmacro %}{% call test() %}Hello{% endcall %}"
+            equal res.txt, "Hello World."
 
 if argv.help
     console.log optimist.usage()
