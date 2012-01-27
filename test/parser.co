@@ -421,6 +421,10 @@ suite.addBatch do
             res = _parse "{% macro test () %}{{ caller() }} World.{% endmacro %}{% call test() %}Hello{% endcall %}"
             equal res.txt, "Hello World."
 
+        "Allows us to send additional, big content, to macros, adding itself to its arguments": ->
+            res = _parse "{% macro test (a,b) %}{{ caller() }} {{a}}{{b}} World.{% endmacro %}{% call test('the','zoum') %}Hello{% endcall %}"
+            equal res.txt, "Hello thezoum World."
+
 if argv.help
     console.log optimist.usage()
     process.exit 0
