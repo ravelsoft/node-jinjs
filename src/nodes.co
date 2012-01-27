@@ -327,26 +327,29 @@ class NodeMacro extends NodeTagContainer
 class NodeCall extends NodeTagContainer
     @tag = \call
     @until = \endcall
-    @call_re = /([a-zA-Z$_0-9]+)\s*\((.*)\)\s*/
+    @call_re = /([a-zA-Z$_0-9]+)\s*\(\s*(.*)\s*\)\s*/
 
     (specs) -> super ...
 
     compile: function (opts, ctx)
         m = @contents.match(NodeCall.call_re)
+        if not m then throw new Error("call tag is malformed")
 
-        contents = "function () {
+        fname = m[1]
+        args = m[2]
+        args = (a.replace(/^\s*|\s*$/g, '') if a for a of args.split(","))
+
+        callerblock = """(function () {
             var _res = '';
             #{@child_code opts, ctx}
             return _res;
-        }"
+        })"""
+        args.push(callerblock)
+        args = args.join(", ")
 
-        contents = """function () {
-            var _res = '';
-            #{@child_code opts, ctx}
-            return _res;
-        }"""
-        console.log(contents)
-        return ""
+        thecall = "_res += #fname(#args);"
+
+        return thecall
 /**
  *
  */
@@ -428,9 +431,9 @@ class NodeIf extends NodeTagContainer
         if not trim @contents
             throw new Error "{% if <condition> %}: condition can't be empty."
 
-        res = "if (#{make_expression @contents, ctx}) {"
-        @ind opts
-        res += """#{@child_code opts, ctx}#{super this, opts, ctx}
+        res = """if (#{make_expression @contents, ctx}) {
+            #{@child_code opts, ctx}
+            #{super this, opts, ctx}
         }"""
         return res
 
