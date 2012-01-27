@@ -398,7 +398,7 @@ class NodeIf extends NodeTagContainer
 
         res = "#{@cur opts}if (#{make_expression @contents, ctx}) {"
         @ind opts
-        res += "#{@child_code opts, ctx}#{super.call this, opts, ctx}
+        res += "#{@child_code opts, ctx}#{super this, opts, ctx}
         #{@ded opts}}"
         return res
 
@@ -485,7 +485,7 @@ class NodeFor extends NodeTagContainer
                 } }
             }
             #{@cur opts}if (#l.index == undefined) {
-                #{super.call this, opts, ctx}
+                #{super this, opts, ctx}
             }
             #l = _prev_loop; #k = _prev_key; #{if value then "#v = _prev_value;" else ""}
             })();
