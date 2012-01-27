@@ -26,6 +26,7 @@
      "devDependencies" : {
         "pegco": "0.0.1",
         "coco": "0.6.x",
-        "vows": "latest"
+        "vows": "latest",
+        "rbuild": "latest"
      }
 }
