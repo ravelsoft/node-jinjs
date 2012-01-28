@@ -287,12 +287,13 @@ class NodeMacro extends NodeTagContainer
         for a of args
             if a.default_value
                 res += "#{a.name} = (#{a.name} === undefined) ? (#{a.default_value}) : #{a.name};"
+        return res
 
     compile: function (opts, ctx)
         { args, function_name } = parse_macro @contents, ctx
 
         # Add the last param, which is *always* the caller block.
-        args.push({name: "caller", default: "(function(){ return \"\"; })"})
+        args.push({name: "caller", default_value: "(function(){ return \"\"; })"})
 
         backup = []
         argcode = []
@@ -300,10 +301,7 @@ class NodeMacro extends NodeTagContainer
 
         for a of args
             backup.push "__#{a.name} = #{a.name}"
-            if a["default"]
-                argcode.push "$$.#{a.name} = #{a.name} || #{a["default"]}"
-            else
-                argcode.push "$$.#{a.name} = #{a.name}"
+            argcode.push "$$.#{a.name} = #{a.name}"
             argendcode.push "if (__#{a.name} !== undefined) $$.#{a.name} = __#{a.name};"
 
         if args

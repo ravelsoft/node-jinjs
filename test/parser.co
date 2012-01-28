@@ -412,6 +412,11 @@ suite.addBatch do
             res = _parse "{% macro test (a, b='World') %}{{ a }} {{ b }}.{% endmacro %}{{ test ('Hello') }}"
             equal res.txt, "Hello World."
 
+        "Can have *several* arguments with default values": ->
+            res = _parse "{% macro test (a='Bouzouk', b='World') %}{{ a }} {{ b }}.{% endmacro %}{{ test ('Hello') }}"
+            equal res.txt, "Hello World."
+
+
         "have arguments which default values are overriden when specified in the function call": ->
             res = _parse "{% macro test (a, b='Not World') %}{{ a }} {{ b }}.{% endmacro %}{{ test ('Hello', 'World') }}"
             equal res.txt, "Hello World."
