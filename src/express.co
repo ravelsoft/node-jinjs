@@ -16,7 +16,7 @@ class ExpressEnvironment extends BasicFileEnvironment
      */
     trackFile: function (path)
         if @track_changes
-            return super.call this, path
+            return super path
 
     getTemplateFromString: function (str, ctx)
         # Return the cache at this stage since express only sends us the text
@@ -24,7 +24,7 @@ class ExpressEnvironment extends BasicFileEnvironment
         return @cache[ctx.filename] if ctx.filename in @cache
 
         # Other wise, just compile the template.
-        res = super.call this, str, ctx
+        res = super str, ctx
 
         # And set its cache here too, even if it is redundant with getTemplate()
         @cache[ctx.filename] = res

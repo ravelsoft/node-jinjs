@@ -3,11 +3,11 @@
     "description" : "A templating language in the Jinja(python)/Twig(php) family for Javascript.\nIt's objective is to compile document templates into Javascript functions\nComes with a CLI tool to use it on static documents and not only for the web.\nIs also made in tandem with Pwilang, which can then be (optionally) used to make HaML-like templates.",
     "keywords" : ["language", "compiler", "templating", "pwilang", "html", "xml", "jinjs"],
     "author" : "Christophe Eymard <christophe.eymard@ravelsoft.com> (http://www.ravelsoft.com)",
-    "version" : "0.3.5",
-    "homepage" : "http://bitbucket.org/ravelsoft/node-jinjs",
+    "version" : "0.3.6",
+    "homepage" : "http://github.com/ravelsoft/node-jinjs",
     "repository" : {
         "type": "hg", 
-        "url": "https://bitbucket.org/ravelsoft/node-jinjs"
+        "url": "https://github.com/ravelsoft/node-jinjs"
     },
     "licenses" : [ {   
             "type" : "MIT",
@@ -15,11 +15,8 @@
         }
     ],
     "engines"     : {"node": ">= 0.4.0"},
-    "directories" : {"lib" : "./lib"  },
+    "directories" : { "lib" : "./lib"  },
     "main" : "./lib/main",
-    "bin" : {
-        "jinjs" : "./lib/command.js"
-     },
      "dependencies" : { 
         "optimist": "0.2.3"
      },
