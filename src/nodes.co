@@ -417,10 +417,27 @@ class NodeElseIf extends NodeTagContainer
         res += "#{@child_code opts, ctx}"
         return res
 
+class NodeElIf extends NodeTagContainer
+    @tag = \elif
+    @inside = elif: NodeElIf, else: NodeElse
+
+    (specs) ->
+        super ...
+
+    compile: function (opts, ctx)
+        if not trim @contents
+            throw new Error "{% elif <condition> %}: condition can't be empty."
+
+        res = "} else if (#{make_expression @contents, ctx}) {"
+        @ind opts
+        res += "#{@child_code opts, ctx}"
+        return res
+
+
 class NodeIf extends NodeTagContainer
     @tag = \if
     @until = \endif
-    @inside = else: NodeElse, elseif: NodeElseIf
+    @inside = else: NodeElse, elseif: NodeElseIf, elif: NodeElIf
 
     (specs) ->
         super ...
