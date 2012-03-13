@@ -105,9 +105,14 @@ suite.addBatch do
             res = _parse "{% if one == 2 %}TXT{% elseif one == 1 %}FO1{% elseif one == 3 %}FO3{% else %}FOO{% endif %}"
             equal res.txt, 'FO1'
 
+        "can have several elif clauses": ->
+            res = _parse "{% if one == 2 %}TXT{% elif one == 1 %}FO1{% elif one == 3 %}FO3{% else %}FOO{% endif %}"
+            equal res.txt, 'FO1'
+
         "can not be condition-less": ->
             throws (-> _parse "{% if %}TXT{% endif %}"), JinJSParseError
             throws (-> _parse "{% if one == 1 %}TXT{% elseif %}{% endif %}"), JinJSParseError
+            throws (-> _parse "{% if one == 1 %}TXT{% elif %}{% endif %}"), JinJSParseError
 
     ##
     ##  FOR TAG
