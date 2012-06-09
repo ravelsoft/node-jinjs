@@ -203,7 +203,7 @@ exports import do
 
     $float: function (value)
         res = parseFloat value
-        return 0.0 if res is NaN
+        return 0.0 if isNaN res
         return res
 
     $forceescape: function (value)
