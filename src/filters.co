@@ -441,10 +441,21 @@ exports import do
             obj = obj[a]
         return obj
 
-    $reverse: function (arr)
-        new_arr = arr.splice 0
+    $reverse: function (arr, keep_array)
+        keep_array = keep_array or false
+        new_arr = arr
+        if \number is typeof arr
+            new_arr = new_arr.toString()
+            new_arr = new_arr.split("")
+            new_arr = new_arr.splice(0)
+        else if \string is typeof arr
+            new_arr = new_arr.split("")
+            new_arr = new_arr.splice(0)
+        else if arr instanceof Array
+            new_arr = new_arr.splice(0)
+        else throw new Error("Unsupported type \"" + typeof arr + "\" for reverse")
         new_arr.reverse()
-        return new_arr
+        return (if (keep_array) then new_arr else new_arr.join(""))
 
     $round: function (value, precision ? 0, method ? 'common')
         if method is \common
