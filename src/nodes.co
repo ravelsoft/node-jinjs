@@ -566,6 +566,7 @@ exports <<< {
         \if : NodeIf
         \do : NodeDo
         \set : NodeSet
+        \let : NodeSet #Deprecated
         \for : NodeFor
         \macro : NodeMacro
         \extends : NodeExtends
