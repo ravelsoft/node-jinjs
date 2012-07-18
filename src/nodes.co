@@ -107,7 +107,12 @@ class NodePrint extends Node
     (specs) -> super ...
 
     compile: function (opts, ctx)
-        return "_res += ((_ref = #{make_expression @contents, ctx}) !== undefined && _ref !== null ? _ref : '').toString();"
+        output = ''
+        if (opts.outputUndefinedVariableWithBrackets)
+            output = "{{#{@contents}}}"
+        else if (opts.outputUndefinedVariable)
+            output = @contents
+        return "_res += ((_ref = #{make_expression @contents, ctx}) !== undefined && _ref !== null ? _ref : '#{output}').toString();"
 
 class NodeTag extends Node
     @tag = \__tag__
@@ -451,6 +456,19 @@ class NodeIf extends NodeTagContainer
         }"""
         return res
 
+/**
+ * Raw Node
+ */
+class NodeRaw extends NodeTagContainer
+    @tag = \raw
+    @until = \endraw
+    
+    (specs) ->
+        super ...
+
+    compile : function (opts, ctx)
+        console.dir @
+        return "_res += 'ffs';";
 
 class NodeElseFor extends NodeTagContainer
     @tag = \else
@@ -543,7 +561,7 @@ class NodeFor extends NodeTagContainer
 exports <<< {
     NodeIf, NodeDo, NodeSet, NodeFor, NodeMacro, NodeList, NodeBasic,
     NodePrint, NodeComment, NodeExtends, NodeInclude, NodeImport, NodeFromImport,
-    NodeContinue, NodeCall
+    NodeContinue, NodeCall, NodeRaw
     default_nodes: do
         \if : NodeIf
         \do : NodeDo
@@ -559,5 +577,6 @@ exports <<< {
         \continue : NodeContinue
         \break : NodeBreak
         \call : NodeCall
+        \raw : NodeRaw
     }
 

@@ -20,5 +20,12 @@ function registerExtension (ext, filter)
 # registerExtension \.pwi, (str) -> pwilang.parse str
 # registerExtension \.pwx, (str) -> pwilang.parse str
 
-exports import { registerExtension }
+function outputUndefinedVariable (output, withBrackets)
+    output ?= true
+    withBrackets ?= false
+    
+    defaultEnvironment.outputUndefinedVariable = output
+    defaultEnvironment.outputUndefinedVariableWithBrackets = withBrackets
+
+exports import { registerExtension, outputUndefinedVariable }
 

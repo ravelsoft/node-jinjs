@@ -12,6 +12,8 @@ class Environment
         return eval t
 
     ({@utils ? require("./utils"), @filters ? require("./filters"), @parser ? new Parser!, @pre_compile_func ? "", @require_exp ? 'require'} ? {}) ->
+        @outputUndefinedVariable = false
+        @outputUndefinedVariableWithBrackets = false
 
     getTemplateFromString: function (str)
         try
@@ -28,7 +30,7 @@ class Environment
         str = @pre_compile_func str if @pre_compile_func
 
         ast = @parser.parse str, compilation_ctx
-        opts = {__indent__: 1, @utils, @filters}
+        opts = {__indent__: 1, @utils, @filters, @outputUndefinedVariable, @outputUndefinedVariableWithBrackets}
 
         compilation_ctx = filters_used: {}
         compilation_ctx <<< {@filters, @utils}
