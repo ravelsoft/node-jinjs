@@ -8,7 +8,7 @@
  *  @param filter: a callback (str) -> that transforms the source before
  *      giving it to JinJS.
  */
-function registerExtension (ext, filter)
+function _registerExtension (ext, filter)
     filter ?= (str) -> str
 
     require.extensions[ext] = (module, filename) ->
@@ -20,5 +20,27 @@ function registerExtension (ext, filter)
 # registerExtension \.pwi, (str) -> pwilang.parse str
 # registerExtension \.pwx, (str) -> pwilang.parse str
 
-exports import { registerExtension }
+/**
+ * Register flag to output undefined variables
+ * @param output: flag to output undefined variable name
+ * @param withBrackets: flag to output undefined variable name with brackets
+ */
+function _outputUndefinedVariable (output, withBrackets)
+    output ?= true
+    withBrackets ?= false
+    
+    defaultEnvironment.outputUndefinedVariable = output
+    defaultEnvironment.outputUndefinedVariableWithBrackets = withBrackets
+
+/**
+ * Options for JinJS
+ * @param opts: object where the properties are set
+ */
+function options (opts)
+    opts ?= {}
+    
+    _registerExtension(opts.ext, opts.filter)
+    _outputUndefinedVariable(opts.outputUndefinedVariable, opts.outputUndefinedVariableWithBrackets)
+
+exports import { options }
 

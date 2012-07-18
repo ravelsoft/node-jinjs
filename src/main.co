@@ -1,6 +1,6 @@
 { defaultEnvironment, Environment } = require \./environment
-{ registerExtension } = require \./helpers
+{ options } = require \./helpers
 { compile } = require \./express
 
-exports <<< { defaultEnvironment, registerExtension, Environment, compile }
+exports <<< { defaultEnvironment, options, Environment, compile }
 
