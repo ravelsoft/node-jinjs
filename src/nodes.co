@@ -1,11 +1,10 @@
-
 { parse:make_expression } = require \./expression
 
 make_parse_rule = (rule_name) ->
     return (contents, ctx) -> make_expression contents, rule_name, ctx
 
 parse_for = make_parse_rule \tag_for
-parse_let = make_parse_rule \tag_let
+parse_set = make_parse_rule \tag_set
 parse_macro = make_parse_rule \tag_macro
 parse_extends = make_expression
 parse_block = make_parse_rule \tag_block
@@ -108,7 +107,12 @@ class NodePrint extends Node
     (specs) -> super ...
 
     compile: function (opts, ctx)
-        return "_res += ((_ref = #{make_expression @contents, ctx}) !== undefined && _ref !== null ? _ref : '').toString();"
+        output = ''
+        if (opts.outputUndefinedVariableWithBrackets)
+            output = "{{#{@contents}}}"
+        else if (opts.outputUndefinedVariable)
+            output = @contents
+        return "_res += ((_ref = #{make_expression @contents, ctx}) !== undefined && _ref !== null ? _ref : '#{output}').toString();"
 
 class NodeTag extends Node
     @tag = \__tag__
@@ -242,13 +246,13 @@ class NodeAbspath extends NodeTag
 /**
  *
  */
-class NodeLet extends NodeTag
-    @tag = \let
+class NodeSet extends NodeTag
+    @tag = \set
 
     (specs) -> super ...
 
     compile: function (opts, ctx)
-        { variable_name, expression } = parse_let @contents, ctx
+        { variable_name, expression } = parse_set @contents, ctx
 
         ctx[variable_name] = true # The variable name is now accessible to the rest of the template.
         return res = "var #{variable_name} = ($$.#{variable_name} = #{expression});"
@@ -452,6 +456,19 @@ class NodeIf extends NodeTagContainer
         }"""
         return res
 
+/**
+ * Raw Node
+ */
+class NodeRaw extends NodeTagContainer
+    @tag = \raw
+    @until = \endraw
+    
+    (specs) ->
+        super ...
+
+    compile : function (opts, ctx)
+        console.dir @
+        return "_res += 'ffs';";
 
 class NodeElseFor extends NodeTagContainer
     @tag = \else
@@ -542,13 +559,14 @@ class NodeFor extends NodeTagContainer
         """
 
 exports <<< {
-    NodeIf, NodeDo, NodeLet, NodeFor, NodeMacro, NodeList, NodeBasic,
+    NodeIf, NodeDo, NodeSet, NodeFor, NodeMacro, NodeList, NodeBasic,
     NodePrint, NodeComment, NodeExtends, NodeInclude, NodeImport, NodeFromImport,
-    NodeContinue, NodeCall
+    NodeContinue, NodeCall, NodeRaw
     default_nodes: do
         \if : NodeIf
         \do : NodeDo
-        \let : NodeLet
+        \set : NodeSet
+        \let : NodeSet #Deprecated
         \for : NodeFor
         \macro : NodeMacro
         \extends : NodeExtends
@@ -560,5 +578,6 @@ exports <<< {
         \continue : NodeContinue
         \break : NodeBreak
         \call : NodeCall
+        \raw : NodeRaw
     }
 

@@ -1,0 +1,41 @@
+{
+  "name" : "jinjs",
+  "version" : "0.3.6",
+  "dependencies" : {
+    "optimist" : {
+      "version" : "0.2.3",
+      "dependencies" : {
+        "wordwrap" : {
+          "version" : "0.0.2"
+        }
+      }
+    },
+    "pegco" : {
+      "version" : "0.0.1",
+      "dependencies" : {
+        "pegjs" : {
+          "version" : "0.6.2"
+        }
+      }
+    },
+    "coco" : {
+      "version" : "0.6.7"
+    },
+    "rbuild" : {
+      "version" : "0.0.5",
+      "dependencies" : {
+        "async" : {
+          "version" : "0.1.22"
+        }
+      }
+    },
+    "vows" : {
+      "version" : "0.6.3",
+      "dependencies" : {
+        "eyes" : {
+          "version" : "0.1.7"
+        }
+      }
+    }
+  }
+}

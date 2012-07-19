@@ -63,8 +63,8 @@ suite = require \vows .describe "Expressions Test Suite"
 
 
 suite.addBatch do
-    "The {% let %} tag": do
-        topic: parse "{% let toto = 1 %}TXT"
+    "The {% set %} tag": do
+        topic: parse "{% set toto = 1 %}TXT"
 
         "Lets us assign to a variable that is later exported": (res) ->
             equal res.ctx.toto, 1
@@ -73,10 +73,10 @@ suite.addBatch do
             equal res.txt, 'TXT'
 
         "does not let us assign to reserved-words variables": (res) ->
-            parseError -> _parse "{% let instanceof = 3 %}"
+            parseError -> _parse "{% set instanceof = 3 %}"
 
         "can have their results even across new lines": ->
-            res = _parse "{% let toto\n=\n 1 %}{{ toto }}"
+            res = _parse "{% set toto\n=\n 1 %}{{ toto }}"
             equal res.txt, "1"
 
     ##
@@ -340,7 +340,7 @@ suite.addBatch do
             equal res.txt, 'foo'
 
         "gets to modify the context": ->
-            included = compile "{% let foo = 'bar' %}"
+            included = compile "{% set foo = 'bar' %}"
             res = _parse "{% include included %}{{ foo }}", foo: "foo", included: included
             equal res.txt, 'bar'
 
@@ -382,22 +382,22 @@ suite.addBatch do
     "The {% import %} tag": do
 
         "allows us to import variables from another template to another": ->
-            imported = compile "{% let foo = 'bar' %}"
+            imported = compile "{% set foo = 'bar' %}"
             res = _parse "{% from imported import foo %}{{ foo }}", imported: imported
             equal res.txt, 'bar'
 
         "allows us to import a whole template as a module": ->
-            imported = compile "{% let foo = 'bar' %}"
+            imported = compile "{% set foo = 'bar' %}"
             res = _parse "{% import imported as imp %}{{ imp.foo }}", imported: imported
             equal res.txt, 'bar'
 
         "by default does not expose the current context to the imported module": ->
-            imported = compile "{% let foo = 'bar' %}"
+            imported = compile "{% set foo = 'bar' %}"
             res = _parse "{% import imported as toto %}{{ foo }}", imported: imported, foo: 'foo'
             equal res.txt, 'foo'
 
         "can pass the context to the imported template": ->
-            imported = compile "{% let foo = bar + 'foo' %}"
+            imported = compile "{% set foo = bar + 'foo' %}"
             res = _parse "{% import imported as toto with context %}{{ toto.foo }}", imported: imported, bar: 'bar'
             equal res.txt, 'barfoo'
 

@@ -186,13 +186,13 @@ exports import do
         if value < 1024
             return "#{value}"
         if value < 1024 * 1024
-            val = val / 1024
+            val = value / 1024
             unit = "Kb"
         else if value < 1024 * 1024 * 1024
-            val = val / (1024 * 1024)
+            val = value / (1024 * 1024)
             unit = "Mb"
         else
-            val = val / (1024 * 1024 * 1024)
+            val = value / (1024 * 1024 * 1024)
             unit = "Gb"
 
         strval = "#{Math.round val}"
@@ -203,7 +203,7 @@ exports import do
 
     $float: function (value)
         res = parseFloat value
-        return 0.0 if res is NaN
+        return 0.0 if isNaN res
         return res
 
     $forceescape: function (value)
@@ -441,10 +441,21 @@ exports import do
             obj = obj[a]
         return obj
 
-    $reverse: function (arr)
-        new_arr = arr.splice 0
+    $reverse: function (arr, keep_array)
+        keep_array = keep_array or false
+        new_arr = arr
+        if \number is typeof arr
+            new_arr = new_arr.toString()
+            new_arr = new_arr.split("")
+            new_arr = new_arr.splice(0)
+        else if \string is typeof arr
+            new_arr = new_arr.split("")
+            new_arr = new_arr.splice(0)
+        else if arr instanceof Array
+            new_arr = new_arr.splice(0)
+        else throw new Error("Unsupported type \"" + typeof arr + "\" for reverse")
         new_arr.reverse()
-        return new_arr
+        return (if (keep_array) then new_arr else new_arr.join(""))
 
     $round: function (value, precision ? 0, method ? 'common')
         if method is \common

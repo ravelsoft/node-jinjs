@@ -20,5 +20,33 @@ function registerExtension (ext, filter)
 # registerExtension \.pwi, (str) -> pwilang.parse str
 # registerExtension \.pwx, (str) -> pwilang.parse str
 
-exports import { registerExtension }
+/**
+ * Register flag to output undefined variables
+ * @param output: flag to output undefined variable name
+ * @param withBrackets: flag to output undefined variable name with brackets
+ */
+function outputUndefinedVariable (output, withBrackets)
+    output ?= true
+    withBrackets ?= false
+    
+    defaultEnvironment.outputUndefinedVariable = output
+    defaultEnvironment.outputUndefinedVariableWithBrackets = withBrackets
+
+/**
+ * Options for JinJS
+ * @param opts: object where the properties are set
+ */
+function options (opts)
+    opts ?= {}
+    
+    # Check if extensions passed
+    if opts.extensions
+        for index, extension in opts.extensions
+            registerExtension extension.ext, extension.filter
+            
+    # Check if outputUndefinedVariable is defined
+    if opts.outputUndefinedVariable
+        outputUndefinedVariable opts.outputUndefinedVariable, opts.outputUndefinedVariableWithBrackets
+
+exports import { registerExtension, outputUndefinedVariable, options }
 

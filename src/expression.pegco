@@ -1,4 +1,3 @@
-
 ->
     compilation_ctx = arguments[2] ? {}
     compilation_ctx.filters ?= {}
@@ -320,7 +319,7 @@ tag_for
     / key:identifier COMMA value:identifier IN exp:expression -> 
         return key: key, value: value, condition: exp 
 
-tag_let
+tag_set
     = variable_name:identifier ASSIGN expression:expression -> 
         return variable_name: variable_name, expression: expression 
 
