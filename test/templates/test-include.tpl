@@ -1,4 +1,4 @@
-{% let variable = "bloup" %}
+{% set variable = "bloup" %}
 {% macro test () %}
 Yoyo {{ variable }}
 {% endmacro %}
